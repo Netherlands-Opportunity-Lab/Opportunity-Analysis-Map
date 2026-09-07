@@ -20,7 +20,16 @@ This is a work in progress!
 1. Create and store the `data/model_grid.feather` file by running `02_create_grid.R`. 
 1. Perform a test run by running `Rscript 03_array_job.R 1` in bash on the OSSC
 3. Check how many jobs are needed (`nrow(model_grid) / batch_size`)
-2. Create an array job using `array_job.sh`. 
+2. Create an array job using `array_job.sh`.
+
+## License
+
+This repository uses two licenses:
+
+- **Code** (scripts, notebooks, and other source files) is licensed under the [MIT License](LICENSE).
+- **Results** (data outputs, figures, and other generated content) are licensed under [CC BY 4.0](LICENSE-RESULTS).
+
+See the respective license files for full terms.
 
 ## Contact
 This project is developed and maintained by the [ODISSEI Social Data Science
