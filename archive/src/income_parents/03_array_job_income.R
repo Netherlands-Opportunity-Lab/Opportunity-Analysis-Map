@@ -48,7 +48,7 @@ chunk_idx <- ((task_id - 1)*chunk_size + 1):min(task_id*chunk_size, n_total)
 # Setting up cluster ----
 
 # load expectation function
-source("src/income_parents/01_expectation_function_income.R")
+source("archive/src/income_parents/01_expectation_function_income.R")
 
 # load the model parameter grid for the current chunk
 tcat("Loading parameters...")
