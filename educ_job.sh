@@ -12,4 +12,4 @@ module load R/4.2.1-foss-2022a
 
 # running script
 echo "Starting R script..."
-Rscript $PROJECT/src/educ_parents/03_array_job_educ.R $SLURM_ARRAY_TASK_ID input
+Rscript $PROJECT/archive/src/educ_parents/03_array_job_educ.R $SLURM_ARRAY_TASK_ID input

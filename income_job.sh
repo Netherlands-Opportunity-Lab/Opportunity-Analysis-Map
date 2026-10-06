@@ -20,7 +20,6 @@ module load R/4.2.1-foss-2022a
 
 # running script
 echo "Starting R script..."
-srun Rscript $PROJECT/src/income_parents/03_array_job_income.R $SLURM_ARRAY_TASK_ID input
-
+srun Rscript $PROJECT/archive/src/income_parents/03_array_job_income.R $SLURM_ARRAY_TASK_ID input
 
 
