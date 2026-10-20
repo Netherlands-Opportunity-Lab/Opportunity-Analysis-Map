@@ -11,10 +11,17 @@ library(scales)
 library(ggtext)
 options(scipen=999)
 
-setwd("/Users/lilsonea/Library/CloudStorage/OneDrive-ErasmusUniversityRotterdam/Documents/JGZ pilot data")
+setwd("C:/Users/nilsv/Erasmus University Rotterdam/Opportunity Lab - Documenten/Opportunity-Analysis-Map/JGZ")
 
 # create paths
 dat_path <- "Export 27-03-2025/"
+fig_path <- "maps/"   # output folder for all maps (relative to the JGZ folder above)
+
+# create all output subfolders up front, so every ggsave() below has a target
+for (d in c("pc4_bmi", "pc4_wiechen", "pc4_sdq", "pc4_bereik",
+            "pc3_bmi", "pc3_wiechen", "pc3_sdq", "pc3_bereik")) {
+  dir.create(file.path(fig_path, d), recursive = TRUE, showWarnings = FALSE)
+}
 
 
 
@@ -118,14 +125,7 @@ for (t in time) {
           panel.grid.major = element_line(color = "transparent"))
   
   # save figure
-  fig_path <- "/Users/lilsonea/Dropbox/Limburg-Noord meeting April 1/maps/pc4/bmi"
-  
-  if (!dir.exists(fig_path)) {
-    dir.create(fig_path, recursive = TRUE)
-    message("Created directory: ", fig_path)
-  }
-  
-  ggsave(paste0(fig_path, "/mean_", t, ".png"), 
+  ggsave(paste0(fig_path, paste0("pc4_bmi/pc4_", t, "_mean.png")), 
          width = 18, height = 18, units = "cm")
 
 } 
@@ -918,7 +918,7 @@ variables <- c("d_obs_always", "d_observed")
   for(v in variables) {
     # load data
     dat <- read.xlsx(file.path(dat_path, "proportions_export.xlsx"), 
-                     sheet = paste0("pc4_3y_proportions.xlsx")) 
+                     sheet = paste0("pc4_3y_proportions_6.xlsx")) 
     colnames(dat)[1] <- "region_id"
     dat <- dat %>% 
       mutate(region_id = as.character(region_id), 
@@ -961,7 +961,7 @@ variables <- c("d_obs_always", "d_observed")
             panel.grid.major = element_line(color = "transparent"))
     
     # save figure
-    ggsave(paste0(fig_path, paste0("pc3_bereik/", v, ".png")), 
+    ggsave(paste0(fig_path, paste0("pc4_bereik/", v, ".png")), 
            width = 18, height = 18, units = "cm")
     
   } 
