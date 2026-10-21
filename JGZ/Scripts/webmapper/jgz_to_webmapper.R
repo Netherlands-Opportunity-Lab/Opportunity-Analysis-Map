@@ -42,9 +42,10 @@ mun_file   <- file.path(base_dir, "Opportunity-Analysis-Gap/areas/Gemeenten alfa
 
 # JGZ organisations (codes as in org_catchment / PC4gebieden.csv)
 org_names <- c("6" = "Limburg-Noord", "7" = "ZONL", "10" = "Verian", "12" = "Icare")
-orgs_selected <- c("6")              # start: Limburg-Noord. Never add "12" (Icare): no permission.
+orgs_selected <- c("10")              # start: Limburg-Noord. Never add "12" (Icare): no permission.
 
 sample_id <- "jgz_1_0"               # own JGZ sample numbering (not s2_0); used as output folder
+file_prefix <- "Y_1_0_"              # file names: Y_1_0_m24_bmi_p90.csv (replaces the leading "y_")
 out_dir   <- file.path(jgz_dir, "webmapper", sample_id,
                        paste(org_names[orgs_selected], collapse = "_"))
 
@@ -121,18 +122,26 @@ spec[[length(spec) + 1]] <- expand_grid(age = sdq_ages, level = c("pc4", "pc3"))
          value_col = "sdq_11_perc", scale = 1, n_col = NA, filter_col = NA, filter = NA)
 
 # 4. Language items (Van Wiechen) ---------------------------------------------
+# Items (codebook_jgz.xlsx / NCJ Van Wiechen schema):
+#   zin2w     41. Zegt "zinnen" van 2 woorden (M)                  - 2 years
+#   pop6      42. Wijst 6 lichaamsdelen aan bij pop (M)            - 2 years
+#   vragen1   48. Stelt vragen naar "wie", "wat", "waar", "hoe" (M) - 3y9m
+#   verstaan2 49. Is goed verstaanbaar voor onderzoeker (no M)     - 3y9m
+# Scores: + / - ; M = positive result on the parent's report (NCJ: "kenmerken
+# met (M) zo nodig op mededeling van de ouder; bij positief resultaat M noteren").
 # Bastiaan's two cut-offs per item:
 #   _can     : child can do it according to parent OR professional = vol + M(elding)
 #   _notseen : professional has not seen it                         = onvol + M
 # The current export (3 categories) only has all parts for zin2w and vragen1;
-# pop6 and verstaan2 only have "_vol", so they are skipped until the new
-# 2-category export arrives.
+# pop6 only has "_vol", so it is skipped until the new 2-category export arrives.
+# verstaan2 has no M option, so "_vol" is already the complete measure.
 wiechen <- tribble(
   ~age,    ~item,     ~measure,         ~filter,
   "2years", "zin2w",   "words2_can",     "zin2w_vol+zin2w_M",
   "2years", "zin2w",   "words2_notseen", "zin2w_onvol+zin2w_M",
   "3y9m",   "vragen1", "questions_can",  "vragen1_vol+vragen1_M",
-  "3y9m",   "vragen1", "questions_notseen", "vragen1_onvol+vragen1_M"
+  "3y9m",   "vragen1", "questions_notseen", "vragen1_onvol+vragen1_M",
+  "3y9m",   "verstaan2", "intelligible",  "verstaan2_vol"
 )
 spec[[length(spec) + 1]] <- expand_grid(wiechen, level = c("pc4", "pc3")) %>%
   mutate(outcome = map2_chr(age, measure, make_name),
@@ -254,7 +263,8 @@ long <- long %>% filter(!outcome %in% too_small)
 overview <- long %>% count(outcome, level) %>% pivot_wider(names_from = level, values_from = n, values_fill = 0)
 for (oc in unique(long$outcome)) {
   out <- to_webmapper(filter(long, outcome == oc))
-  write.csv(out, file.path(out_dir, paste0(oc, ".csv")))   # row names + "NA", as in the examples
+  fn <- paste0(file_prefix, sub("^y_", "", oc), ".csv")
+  write.csv(out, file.path(out_dir, fn))   # row names + "NA", as in the examples
 }
 
 #### OUTCOME TABLE (labels for the website) -----------------------------------
@@ -284,29 +294,19 @@ population <- c(
 )
 
 labels <- tribble(
-  ~measure,            ~outcome_name,                 ~type,                 ~definition,
-  "takeup_always",     "Altijd gezien door de JGZ",   "Bereik",              "is het percentage {pop} dat bij alle drie de contactmomenten op 2 jaar, 3 jaar en 3 jaar en 9 maanden door de jeugdgezondheidszorg is gezien.",
-  "takeup_any",        "Minstens eens gezien door de JGZ", "Bereik",         "is het percentage {pop} dat bij minstens één van de contactmomenten op 2 jaar, 3 jaar of 3 jaar en 9 maanden door de jeugdgezondheidszorg is gezien.",
-  "bmi_p90",           "Hoog BMI",                    "Gewicht",             "is het percentage {pop} met een BMI boven het 90e percentiel van alle gemeten {pop}.",
-  "sdq11",             "Sociaal-emotionele problemen", "Sociaal-emotioneel", "is het percentage {pop} met een totaalscore van 11 of hoger op de SDQ (Strengths and Difficulties Questionnaire), een signaal voor sociaal-emotionele problemen.",
-  "words2_can",        "Zegt zinnen van twee woorden", "Taalontwikkeling",   "is het percentage {pop} dat zinnen van twee woorden zegt, vastgesteld door de jeugdgezondheidszorg of gemeld door de ouder (Van Wiechen-onderzoek).",
-  "words2_notseen",    "Twee-woordzinnen niet vastgesteld", "Taalontwikkeling", "is het percentage {pop} bij wie de jeugdgezondheidszorg niet zelf heeft vastgesteld dat het kind zinnen van twee woorden zegt: onvoldoende, of alleen gemeld door de ouder (Van Wiechen-onderzoek).",
-  "questions_can",     "Stelt vragen",                "Taalontwikkeling",    "is het percentage {pop} dat vragen stelt (wie, wat, waar, waarom), vastgesteld door de jeugdgezondheidszorg of gemeld door de ouder (Van Wiechen-onderzoek).",
-  "questions_notseen", "Vragen stellen niet vastgesteld", "Taalontwikkeling", "is het percentage {pop} bij wie de jeugdgezondheidszorg niet zelf heeft vastgesteld dat het kind vragen stelt: onvoldoende, of alleen gemeld door de ouder (Van Wiechen-onderzoek)."
+  ~measure,            ~outcome_name,                       ~type,                ~definition,
+  "takeup_always",     "Altijd gezien door de JGZ",         "Bereik",             "is het percentage {pop} dat bij alle drie de contactmomenten op 2 jaar, 3 jaar en 3 jaar en 9 maanden door de jeugdgezondheidszorg is gezien.",
+  "takeup_any",        "Minstens eens gezien door de JGZ",  "Bereik",             "is het percentage {pop} dat bij minstens één van de contactmomenten op 2 jaar, 3 jaar of 3 jaar en 9 maanden door de jeugdgezondheidszorg is gezien.",
+  "bmi_p90",           "Hoog BMI",                          "Gewicht",            "is het percentage {pop} met een BMI boven het 90e percentiel van alle gemeten {pop}.",
+  "sdq11",             "Sociaal-emotionele problemen",      "Sociaal-emotioneel", "is het percentage {pop} met een totaalscore van 11 of hoger op de SDQ (Strengths and Difficulties Questionnaire), een signaal voor sociaal-emotionele problemen.",
+  "words2_can",        "Zegt zinnen van twee woorden",      "Taalontwikkeling",   "is het percentage {pop} dat zinnen van twee woorden zegt (Van Wiechen-kenmerk 41), gezien door de JGZ-professional of gemeld door de ouder.",
+  "words2_notseen",    "Tweewoordzinnen niet gezien door de JGZ", "Taalontwikkeling", "is het percentage {pop} bij wie de JGZ-professional niet zelf heeft gezien dat het kind zinnen van twee woorden zegt (Van Wiechen-kenmerk 41): onvoldoende gescoord, of alleen gemeld door de ouder.",
+  "questions_can",     "Stelt vragen (wie, wat, waar, hoe)", "Taalontwikkeling",  "is het percentage {pop} dat vragen stelt met wie, wat, waar of hoe (Van Wiechen-kenmerk 48), gezien door de JGZ-professional of gemeld door de ouder.",
+  "questions_notseen", "Vragen stellen niet gezien door de JGZ", "Taalontwikkeling", "is het percentage {pop} bij wie de JGZ-professional niet zelf heeft gezien dat het kind vragen stelt met wie, wat, waar of hoe (Van Wiechen-kenmerk 48): onvoldoende gescoord, of alleen gemeld door de ouder.",
+  "intelligible",      "Goed verstaanbaar",                 "Taalontwikkeling",   "is het percentage {pop} dat goed verstaanbaar is voor de JGZ-professional (Van Wiechen-kenmerk 49)."
 )
 
-# open questions per measure, to settle before publishing
-notes <- tribble(
-  ~measure,         ~to_check,
-  "takeup_always",  "M-age 45 chosen for the whole 2y-3y9m window. Which proportions sheet is final (with/without _6/_7/_10 suffix)?",
-  "takeup_any",     "Mostly suppressed (take-up close to 100%); consider leaving it out.",
-  "bmi_p90",        "90th percentile of which reference group (all children in the data, per sex, per age)? Bastiaan: check in the code. Name 'Hoog BMI' instead of 'overgewicht' on purpose (not the clinical definition). PC4 export has only 99 rows per sheet.",
-  "sdq11",          "Cut-off 11 to be reviewed by Bastiaan before the final run. Who filled in the SDQ (parent / teacher / youth)?",
-  "words2_can",     "Item label assumed from 'zin2w' (zinnen van 2 woorden); check in the BDS who assesses (jeugdarts / jeugdverpleegkundige).",
-  "words2_notseen", "Current export has 3 categories that do not always sum to 100%; replace by the new 2-category export.",
-  "questions_can",  "Item 'vragen1' assumed to be the wie/wat/waar/waarom question; check in the BDS.",
-  "questions_notseen", "As words2_notseen."
-)
+# open questions per measure, to settle before publishin
 
 school_note <- "Months for school groups (groep 2 = 60, groep 7 = 120, klas 2 = 162) are placeholders until the mean age is computed in CBS."
 
