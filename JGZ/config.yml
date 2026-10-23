@@ -1,0 +1,50 @@
+# Configuration for the JGZ (youth health care) analysis and export scripts in
+# JGZ/Scripts (map tables, gradients, export bundle). Run them from the
+# repository root, e.g.
+#   setwd("H:/Opportunity-Analysis-Map"); source("JGZ/Scripts/map/jgz_map_tables.R")
+# The preprocessing (cleaning, panel, contact moments, catchment sample) is in
+# Opportunity-Preprocessing/src/jgz with config/jgz.yml there.
+
+default:
+  settings:
+    # Minimum number of observations per published cell (CBS output rule)
+    min_cell: 10
+
+    # --- map tables (map/jgz_map_tables.R) ---------------------------------------
+    # BMI outlier rule: drop |z| > this, z computed within contact moment x sex
+    bmi_z_max: 5
+    # Top-10% BMI flag: 90th percentile within sex (TRUE) or over boys and
+    # girls together (FALSE, as Coen's gradient do-file). Bastian (20 Oct):
+    # "the whole group" -- confirm which is meant.
+    bmi_p90_by_sex: TRUE
+    # SDQ cut-offs
+    sdq_cutoffs: [11, 14]
+
+    # --- export bundle (export/jgz_export_bundle.R) ------------------------------
+    # Organisations whose results may be exported (6 LimburgNoord, 7 ZONL,
+    # 10 Verian, 12 Icare). Only include organisations that gave permission.
+    export_orgs: [7, 10]
+    # Also export pooled results (all organisations together)? Only when every
+    # organisation in the pool gave permission.
+    export_pooled: FALSE
+    # Also export "excluding organisation X" results for the orgs above?
+    export_excl: FALSE
+
+  file_locations:
+    # Input from the preprocessing: one .rds per contact moment
+    # (Opportunity-Preprocessing config/jgz.yml: contact_moment_folder)
+    contact_moment_folder: "H:/JGZ-Pilot-Data/contact_moments"
+
+    # Map tables: BMI / Wiechen / SDQ per PC3 and PC4 (output of the map
+    # tables script, input of the export bundle)
+    maps_folder: "H:/JGZ-Pilot-Data/Descriptives Results/excel-info-maps"
+
+    # Gradient Excel output (input of the gradient scripts; their tidy and
+    # checked versions are written next to it)
+    gradients_folder: "H:/JGZ-Pilot-Data/Gradients Analysis Results"
+
+    # Other results bundled for export
+    proportions_folder:  "H:/Archive/Sonya/JGZ pilot data/Proportions Results"
+    bereik_folder:       "H:/Archive/Sonya/JGZ pilot data/Bereik Regression Results"
+    export_descriptives_folder: "H:/Archive/Sonya/JGZ pilot data/Descriptives Results"
+    export_folder:       "H:/Archive/Sonya/Export JGZ"
