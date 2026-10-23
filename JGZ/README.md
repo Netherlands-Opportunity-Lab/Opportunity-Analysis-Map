@@ -18,7 +18,7 @@ They are written for the CBS RA versions (R 3.6.2, dplyr 1.0.2).
 
 | Script | Input | Output | What it does |
 |---|---|---|---|
-| `map/jgz_map_tables.R` | `cm_<visit>.rds` (preprocessing 02) | `jgz_maps_{bmi,wiechen,sdq}.xlsx` | BMI / Wiechen / SDQ per PC3 and PC4, one measurement per child per visit, small-cell suppression |
+| `map/jgz_map_tables.R` | `cm_<visit>.rds` (preprocessing 02) | `jgz_maps_{bmi,wiechen,sdq}.xlsx` | BMI / Wiechen / SDQ per PC3 and PC4, one measurement per child per visit (the one closest to the nominal age, `target_age`), small-cell suppression |
 | `gradients/jgz_tidy_gradients.R` | gradient Excel files | `*_tidy.xlsx` | Reshapes gradient output (20 income bins) from wide to long |
 | `gradients/jgz_check_gradients.R` | `*_tidy.xlsx` | `*_tidy_export.xlsx` | Combines speech/language files and runs the disclosure checks in `gradients/check_function.R` |
 | `export/jgz_export_bundle.R` | map tables, checked gradients, proportions, bereik regressions, descriptives | export workbooks | Bundles everything for the organisations in `export_orgs` (config). Map workbooks keep the 2025 file and sheet names that `map/pc4_map_JGZ.R` reads |
