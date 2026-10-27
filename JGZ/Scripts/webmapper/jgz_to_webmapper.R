@@ -41,8 +41,8 @@ pc4_org_file <- file.path(jgz_dir, "resources/PC4gebieden.csv") # PC4 -> organis
 mun_file   <- file.path(base_dir, "Opportunity-Analysis-Gap/areas/Gemeenten alfabetisch 2022.xlsx")
 
 # JGZ organisations (codes as in org_catchment / PC4gebieden.csv)
-org_names <- c("6" = "Limburg-Noord", "7" = "ZONL", "10" = "Verian", "12" = "Icare")
-orgs_selected <- c("10")              # start: Limburg-Noord. Never add "12" (Icare): no permission.
+org_names <- c("6" = "Limburg-Noord", "7" = "ZONL", "10" = "Verian", "12" = "org12")
+orgs_selected <- c("10")             # 6, 7 and/or 10. Never add "12": no permission to show it.
 
 sample_id <- "jgz_1_0"               # own JGZ sample numbering (not s2_0); used as output folder
 file_prefix <- "Y_1_0_"              # file names: Y_1_0_m24_bmi_p90.csv (replaces the leading "y_")
@@ -133,7 +133,9 @@ spec[[length(spec) + 1]] <- expand_grid(age = sdq_ages, level = c("pc4", "pc3"))
 #   _can     : child can do it according to parent OR professional = vol + M(elding)
 #   _notseen : professional has not seen it                         = onvol + M
 # The current export (3 categories) only has all parts for zin2w and vragen1;
-# pop6 only has "_vol", so it is skipped until the new 2-category export arrives.
+# pop6 only has "_vol" in the 27-03-2025 export (its M and onvol rows were not
+# exported for any area), so for now it is shown as "seen by the professional"
+# (= "+" only). Switch to the _can / _notseen pair once the new export has it.
 # verstaan2 has no M option, so "_vol" is already the complete measure.
 wiechen <- tribble(
   ~age,    ~item,     ~measure,         ~filter,
@@ -141,7 +143,8 @@ wiechen <- tribble(
   "2years", "zin2w",   "words2_notseen", "zin2w_onvol+zin2w_M",
   "3y9m",   "vragen1", "questions_can",  "vragen1_vol+vragen1_M",
   "3y9m",   "vragen1", "questions_notseen", "vragen1_onvol+vragen1_M",
-  "3y9m",   "verstaan2", "intelligible",  "verstaan2_vol"
+  "3y9m",   "verstaan2", "intelligible",  "verstaan2_vol",
+  "2years", "pop6",    "bodyparts_seen", "pop6_vol"
 )
 spec[[length(spec) + 1]] <- expand_grid(wiechen, level = c("pc4", "pc3")) %>%
   mutate(outcome = map2_chr(age, measure, make_name),
@@ -156,7 +159,7 @@ spec <- bind_rows(spec)
 
 #### AREAS OF THE SELECTED ORGANISATION(S) -------------------------------------
 # PC4 -> organisation. A PC4 is kept only if it belongs to a selected org and to
-# no other org (PC4 8080 is listed under both Verian and Icare).
+# no other org (PC4 8080 is listed under two organisations).
 pc4_org <- read_csv(pc4_org_file, col_types = cols(.default = "c")) %>%
   mutate(postcode_4 = str_pad(postcode_4, 4, pad = "0"))
 
@@ -303,10 +306,24 @@ labels <- tribble(
   "words2_notseen",    "Tweewoordzinnen niet gezien door de JGZ", "Taalontwikkeling", "is het percentage {pop} bij wie de JGZ-professional niet zelf heeft gezien dat het kind zinnen van twee woorden zegt (Van Wiechen-kenmerk 41): onvoldoende gescoord, of alleen gemeld door de ouder.",
   "questions_can",     "Stelt vragen (wie, wat, waar, hoe)", "Taalontwikkeling",  "is het percentage {pop} dat vragen stelt met wie, wat, waar of hoe (Van Wiechen-kenmerk 48), gezien door de JGZ-professional of gemeld door de ouder.",
   "questions_notseen", "Vragen stellen niet gezien door de JGZ", "Taalontwikkeling", "is het percentage {pop} bij wie de JGZ-professional niet zelf heeft gezien dat het kind vragen stelt met wie, wat, waar of hoe (Van Wiechen-kenmerk 48): onvoldoende gescoord, of alleen gemeld door de ouder.",
-  "intelligible",      "Goed verstaanbaar",                 "Taalontwikkeling",   "is het percentage {pop} dat goed verstaanbaar is voor de JGZ-professional (Van Wiechen-kenmerk 49)."
+  "intelligible",      "Goed verstaanbaar",                 "Taalontwikkeling",   "is het percentage {pop} dat goed verstaanbaar is voor de JGZ-professional (Van Wiechen-kenmerk 49).",
+  "bodyparts_seen",    "Wijst lichaamsdelen aan bij pop",   "Taalontwikkeling",   "is het percentage {pop} bij wie de JGZ-professional heeft gezien dat het kind 6 lichaamsdelen aanwijst bij een pop (Van Wiechen-kenmerk 42)."
 )
 
-# open questions per measure, to settle before publishin
+# open questions per measure, to settle before publishing
+notes <- tribble(
+  ~measure,         ~to_check,
+  "takeup_always",  "M-age 45 chosen for the whole 2y-3y9m window. Which proportions sheet is final (with/without _6/_7/_10 suffix)?",
+  "takeup_any",     "Mostly suppressed (take-up close to 100%); consider leaving it out.",
+  "bmi_p90",        "90th percentile computed on all data, so the same cut-off for every area (Bastian, 27-10-2026). Name 'Hoog BMI' instead of 'overgewicht' on purpose (not the clinical definition). PC4 export has only 99 rows per sheet.",
+  "sdq11",          "Cut-off 11 is not in the BDS; Bastian wants to review it. BDS has separate SDQ versions (5 yr, 7-12 yr, 13/14 yr) and records who filled it in (element 1343).",
+  "words2_can",     "Counts M as 'can do'. The BDS language assessment at 2 years scores item 41 as 2 only for '+' (M counts as 0).",
+  "words2_notseen", "Current export has 3 categories that do not always sum to 100%; replace by the new 2-category export.",
+  "questions_can",  "Item 48 is wie/wat/waar/HOE (not waarom: that is item 50, vragen2).",
+  "questions_notseen", "As words2_notseen.",
+  "intelligible",   "Item 49 has no M option, so voldoende = observed by the examiner.",
+  "bodyparts_seen", "Only '+' (voldoende) was exported for pop6, so this is 'seen by the professional', not the _can/_notseen pair used for the other items."
+)
 
 school_note <- "Months for school groups (groep 2 = 60, groep 7 = 120, klas 2 = 162) are placeholders until the mean age is computed in CBS."
 
