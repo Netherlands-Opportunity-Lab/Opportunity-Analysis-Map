@@ -41,8 +41,8 @@ pc4_org_file <- file.path(jgz_dir, "resources/PC4gebieden.csv") # PC4 -> organis
 mun_file   <- file.path(base_dir, "Opportunity-Analysis-Gap/areas/Gemeenten alfabetisch 2022.xlsx")
 
 # JGZ organisations (codes as in org_catchment / PC4gebieden.csv)
-org_names <- c("6" = "Limburg-Noord", "7" = "ZONL", "10" = "Verian", "12" = "Icare")
-orgs_selected <- c("6")              # start: Limburg-Noord. Never add "12" (Icare): no permission.
+org_names <- c("6" = "Limburg-Noord", "7" = "ZONL", "10" = "Verian", "12" = "org12")
+orgs_selected <- c("6")              # start: Limburg-Noord. Never add "12" (org12): no permission.
 
 sample_id <- "jgz_1_0"               # own JGZ sample numbering (not s2_0); used as output folder
 out_dir   <- file.path(jgz_dir, "webmapper", sample_id,
@@ -147,7 +147,7 @@ spec <- bind_rows(spec)
 
 #### AREAS OF THE SELECTED ORGANISATION(S) -------------------------------------
 # PC4 -> organisation. A PC4 is kept only if it belongs to a selected org and to
-# no other org (PC4 8080 is listed under both Verian and Icare).
+# no other org (PC4 8080 is listed under both Verian and org12).
 pc4_org <- read_csv(pc4_org_file, col_types = cols(.default = "c")) %>%
   mutate(postcode_4 = str_pad(postcode_4, 4, pad = "0"))
 
