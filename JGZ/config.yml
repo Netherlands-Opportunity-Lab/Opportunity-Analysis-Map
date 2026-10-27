@@ -22,7 +22,7 @@ default:
 
     # --- export bundle (export/jgz_export_bundle.R) ------------------------------
     # Organisations whose results may be exported (6 LimburgNoord, 7 ZONL,
-    # 10 Verian, 12 Icare). Only include organisations that gave permission.
+    # 10 Verian, 12 Org4). Only include organisations that gave permission.
     export_orgs: [7, 10]
     # Also export pooled results (all organisations together)? Only when every
     # organisation in the pool gave permission.
