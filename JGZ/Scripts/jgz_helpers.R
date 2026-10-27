@@ -22,7 +22,7 @@ ensure_dir <- function(path) {
 }
 
 # Organisation codes used in the JGZ files
-ORG_CODES <- c(LimburgNoord = 6, ZONL = 7, Verian = 10, Org4 = 12)   # 4th organisation: keep anonymous in public files
+ORG_CODES <- c(LimburgNoord = 6, ZONL = 7, Verian = 10, org12 = 12)   # 4th organisation: never name it in public files
 
 
 # ---- Disclosure control (map tables, export) ------------------------------------
