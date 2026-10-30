@@ -1,0 +1,17 @@
+# Configuration of the Opportunity Map analysis: paths for the steps that run in
+# the CBS RA (00 and 02). Paths are relative to the repository root unless
+# absolute. In the CBS RA this file is config/config.yml (without the version
+# prefix). The OSSC array jobs (03) take no settings from here.
+
+default:
+  file_locations:
+    # Cohort files made by Opportunity-Preprocessing (<cohort>_cohort.rds)
+    cohort_folder: "H:/Opportunity-Preprocessing/output"
+    # Slimmed cohort files and model grids, the input of the OSSC jobs
+    input_folder: "input"
+
+    # CBS reference files for the region lists in 02_create_grid
+    # (CBS sometimes moves or removes these files)
+    pwr_file: "K:/Utilities/HULPbestanden/PWR/PWR2024.sav"
+    gwb_file: "K:/Utilities/HULPbestanden/PC6cryptgwb/PC6gwb2024V1.sav"
+    corop_file: "K:/Utilities/HULPbestanden/GebiedeninNederland/Gemeenten en COROP vanaf 1981.xlsx"

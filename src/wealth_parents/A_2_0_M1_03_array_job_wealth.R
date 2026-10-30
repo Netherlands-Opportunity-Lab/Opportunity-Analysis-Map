@@ -30,7 +30,7 @@ tcat("task_id =", task_id, "; data_dir =", data_dir)
 tcat("Setting up chunks")
 # first we compute how many models to run on this node
 # each node has 128 cores, use 96
-n_cores  <- 64
+n_cores  <- 96
 # each core can estimate about 14 models per second
 mod_rate <- 5
 # we want to run each job for about 1 hour (3600 seconds)
@@ -40,7 +40,7 @@ chunk_size <- n_cores*mod_rate*job_time
 
 
 # then we get the current task id and assign the right chunk to the current job
-n_total   <- feather_metadata(file.path(data_dir, "income/model_grid.feather"))$dim[1]
+n_total   <- feather_metadata(file.path(data_dir, "wealth/model_grid.feather"))$dim[1]
 chunk_idx <- ((task_id - 1)*chunk_size + 1):min(task_id*chunk_size, n_total)
 
 
@@ -48,11 +48,12 @@ chunk_idx <- ((task_id - 1)*chunk_size + 1):min(task_id*chunk_size, n_total)
 # Setting up cluster ----
 
 # load expectation function
-source("archive/src/income_parents/01_expectation_function_income.R")
+# (with or without the version prefix A_2_0_M1_; run from the repository root)
+source(list.files("src/wealth_parents", "01_expectation_function_wealth\\.R$", full.names = TRUE))
 
 # load the model parameter grid for the current chunk
 tcat("Loading parameters...")
-model_grid <- feather(file.path(data_dir, "income/model_grid.feather"))[chunk_idx,]
+model_grid <- feather(file.path(data_dir, "wealth/model_grid.feather"))[chunk_idx,]
 
 # load required datasets
 req_data <- as.character(unique(model_grid$data_source))
@@ -92,7 +93,7 @@ out_matrix <- parSapplyLB(
       outcome_name  = settings$outcome,
       region_id     = settings$region_id,
       region_type   = settings$region_type,
-      income_grp    = settings$income_group,
+      wealth_grp    = settings$wealth_group,
       migration_grp = settings$migration_group,
       gender_grp    = settings$gender_group,
       hh_grp        = settings$household_group
@@ -111,7 +112,7 @@ tcat("Done! Storing results...")
 out_matrix <- t(out_matrix)
 colnames(out_matrix) <- c("est", "lwr", "upr", "n")
 file_name <- paste0("out_matrix_", paste(rep("0", 5-nchar(task_id)), collapse = ""), task_id, ".rds")
-write_rds(out_matrix, file.path("output/income", file_name))
+write_rds(out_matrix, file.path("output/wealth", file_name))
 
 
 tcat("Done.")

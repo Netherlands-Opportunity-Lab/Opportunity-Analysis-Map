@@ -29,7 +29,7 @@ tcat("task_id =", task_id, "; data_dir =", data_dir)
 tcat("Setting up chunks")
 # first we compute how many models to run on this node
 # each node has 128 cores, use 96
-n_cores  <- 96
+n_cores  <- 64
 # each core can estimate about 14 models per second
 mod_rate <- 5
 # we want to run each job for about 1 hour (3600 seconds)
@@ -48,12 +48,12 @@ chunk_idx <- ((task_id - 1)*chunk_size + 1):min(task_id*chunk_size, n_total)
 # Setting up cluster ----
 
 # load expectation function
-source("archive/src/educ_parents/01_expectation_function_educ.R")
+# (with or without the version prefix A_2_0_M1_; run from the repository root)
+source(list.files("src/educ_parents", "01_expectation_function_educ\\.R$", full.names = TRUE))
 
 # load the model parameter grid for the current chunk
 tcat("Loading parameters...")
-# model_grid <- feather(file.path(data_dir, "educ/model_grid.feather"))[chunk_idx,]
-model_grid <- feather(file.path(data_dir, "educ/model_grid_subset.feather"))[chunk_idx,]
+model_grid <- feather(file.path(data_dir, "educ/model_grid.feather"))[chunk_idx,]
 
 
 # load required datasets
@@ -113,7 +113,7 @@ tcat("Done! Storing results...")
 out_matrix <- t(out_matrix)
 colnames(out_matrix) <- c("est", "lwr", "upr", "n")
 file_name <- paste0("out_matrix_", paste(rep("0", 5-nchar(task_id)), collapse = ""), task_id, ".rds")
-write_rds(out_matrix, file.path("output", file_name))
+write_rds(out_matrix, file.path("output/educ", file_name))
 
 
 tcat("Done.")

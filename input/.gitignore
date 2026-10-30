@@ -1,0 +1,3 @@
+# Cohort files and model grids (not in git). Never commit data.
+*
+!.gitignore

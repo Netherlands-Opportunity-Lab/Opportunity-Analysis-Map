@@ -3,8 +3,11 @@
 # factors for categorical variables!)
 library(tidyverse)
 
-raw_data_dir <- "raw_data"
-processed_dir <- "input"
+# folders in config/A_2_0_M1_config.yml
+map_config <- list.files("config", "^(A_[0-9]+_[0-9]+_M[0-9]+_)?config\\.yml$", full.names = TRUE)
+map_loc <- config::get("file_locations", file = map_config)
+raw_data_dir <- map_loc$cohort_folder   # cohort files from Opportunity-Preprocessing
+processed_dir <- map_loc$input_folder   # slimmed cohort files for the OSSC
 
 filter_vars <- c("income_group", "wealth_group", "migration_background",
                  "has_migration", "sex", "type_household",
@@ -35,7 +38,7 @@ age35_cohort <-
   mutate(corop_code = gsub("CR", "", corop_code))
 age35_cohort %>% write_rds(file.path(processed_dir, "age35_cohort.rds"))
 cat("Size after processing: ", format(object.size(age35_cohort), "MB"), "\n\n")
-#rm(age35_cohort)
+rm(age35_cohort)
 
 
 #### AGE21 COHORT ####
@@ -53,7 +56,7 @@ age21_cohort <-
 age21_cohort <- age21_cohort %>% select(-c(starts_with("c21_age"))) 
 age21_cohort %>% write_rds(file.path(processed_dir, "age21_cohort.rds"))
 cat("Size after processing: ", format(object.size(age21_cohort), "MB"), "\n\n")
-#rm(age21_cohort)
+rm(age21_cohort)
  
 
 #### AGE16 COHORT ####
@@ -69,22 +72,23 @@ age16_cohort <-
   mutate(corop_code = gsub("CR", "", corop_code))
 age16_cohort %>% write_rds(file.path(processed_dir, "age16_cohort.rds"))
 cat("Size after processing: ", format(object.size(age16_cohort), "MB"), "\n\n")
-#rm(age16_cohort)
+rm(age16_cohort)
 
 
 #### PRIM8 A COHORT ####
 cat("Processing prim8 a cohort...\n")
-prim8_cohort <- read_rds(file.path(raw_data_dir, "prim8__a_cohort.rds"))
+prim8_cohort <- read_rds(file.path(raw_data_dir, "prim8_a_cohort.rds"))
 cat("Size before processing: ", format(object.size(prim8_cohort), "MB"), "\n")
 prim8_cohort <- 
   prim8_cohort %>%
   ungroup() %>% 
   select(RINPERSOONS, RINPERSOON, all_of(predictor_vars), parents_education, 
          all_of(filter_edu_vars), all_of(region_vars_school), starts_with("c11_")) %>% 
-  mutate(across(all_of(region_vars_school), as.factor)) 
-prim8_cohort %>% write_rds(file.path(processed_dir, "prim8__a_cohort.rds"))
+  mutate(across(all_of(region_vars_school), as.factor))
+prim8_cohort %>% write_rds(file.path(processed_dir, "prim8_a_cohort.rds"))
 cat("Size after processing: ", format(object.size(prim8_cohort), "MB"), "\n\n")
 rm(prim8_cohort)
+
 
 #### PRIM8 B COHORT ####
 cat("Processing prim8 b cohort...\n")
