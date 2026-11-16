@@ -47,12 +47,12 @@ GROUP_COLUMNS <- c("income_parents_perc", "income_group", "income_group_tails", 
 # Children with a value for `outcome`, seen at that age by an organisation in
 # `export_orgs`, with that age's area columns renamed to org / pc3 / pc4 and a
 # constant column all = "all" (for pooled results).
-kaart_outcome_data <- function(cohort, outcome, export_orgs) {
+kaart_outcome_data <- function(cohort, outcome, export_orgs, extra = character(0)) {
   age <- outcome_age(outcome)
   area_cols <- c(org = paste0("org_", age), pc3 = paste0("pc3_", age), pc4 = paste0("pc4_", age))
   missing <- setdiff(area_cols, names(cohort))
   if (length(missing) > 0) stop(outcome, ": area columns missing in the cohort file: ", paste(missing, collapse = ", "))
-  keep <- intersect(GROUP_COLUMNS, names(cohort))
+  keep <- intersect(c(GROUP_COLUMNS, extra), names(cohort))
   d <- cohort[!is.na(cohort[[outcome]]), c(outcome, unname(area_cols), keep), drop = FALSE]
   names(d)[match(area_cols, names(d))] <- names(area_cols)
   d <- d[!is.na(d$org) & d$org %in% export_orgs, , drop = FALSE]

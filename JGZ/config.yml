@@ -61,12 +61,52 @@ default:
     kaart_min_count: 10
     kaart_round_n: 10
 
+    # --- kloof (kloof/jgz_kloof.R) -------------------------------------------------
+    # Kansenkloof method (Opportunity-Analysis-Gap): per subgroup the mean and the
+    # mean per bin of the parental measure (ntile within the subgroup). Geography =
+    # each organisation in export_orgs ("pooled" too if export_pooled is TRUE).
+    kloof_outcomes: "all"
+    # Parental measures: label -> column of the cohort file (raw amount, as Gap)
+    kloof_parental_measures: {income: "income_parents", wealth: "wealth_parents"}
+    # Subgroup values as Gap's filter_options, with the labels of the JGZ cohort
+    # file ("Turkiye"; "With Migration Background" = has_migration == 1)
+    kloof_sex: ["Total", "Men", "Women"]
+    kloof_migration_background: ["Total", "No Migration Background", "Turkiye", "Morocco", "Suriname",
+                                 "Dutch Caribbean", "With Migration Background"]
+    kloof_type_household: ["Total", "Single Parent", "Two Parents"]
+    # Thresholds as config/A_2_0_G1_config.yml of the Gap repo: minimum children
+    # in a subgroup for a mean and for 5, 10 and 20 bins, and the CBS rules
+    kloof_min_n_mean: 50
+    kloof_min_n_bins_5: 250
+    kloof_min_n_bins_10: 500
+    kloof_min_n_bins_20: 1000
+    kloof_cbs_min_n_cell: 50
+    kloof_cbs_min_n_category: 10
+
+    # --- bereik (bereik/jgz_bereik.R) ----------------------------------------------
+    # Take-up from the catchment sample (jgz_catchment_cohort.rds): share of the
+    # children living in the area who were seen by the JGZ, per organisation
+    # (catchment area), PC3 and PC4 of the child's address. Same estimate and
+    # CBS rules as the kaart (income group "all" only: the catchment sample has
+    # no parental income percentile).
+    bereik_region_types: ["org", "pc3", "pc4"]
+    bereik_gender_groups: ["all"]
+    # org_catchment (1-4) -> org code (6, 7, 10, 12), so export_orgs applies
+    org_catchment_codes: {"1": 6, "2": 7, "3": 10, "4": 12}
+
   file_locations:
     # Cohort file of the preprocessing (Opportunity-Preprocessing, cohort jgz):
     # one row per child, outcomes y_m<age>_*, pc3/pc4/org per age. Input of the kaart.
     cohort_file: "H:/Opportunity-Preprocessing/output/jgz_cohort.rds"
     # Kaart results (kaart/jgz_kaart.R): estimates before and after the CBS rules
     kaart_folder: "H:/JGZ-Pilot-Data/kaart"
+    # Kloof results (kloof/jgz_kloof.R)
+    kloof_folder: "H:/JGZ-Pilot-Data/kloof"
+    # Catchment cohort of the preprocessing (cohort jgz_catchment): one row per
+    # child living in a catchment area, y_m*_takeup*, org_catchment, postcode_4
+    catchment_cohort_file: "H:/Opportunity-Preprocessing/output/jgz_catchment_cohort.rds"
+    # Bereik results (bereik/jgz_bereik.R)
+    bereik_results_folder: "H:/JGZ-Pilot-Data/bereik"
 
     # Input from the preprocessing: one .rds per contact moment
     # (Opportunity-Preprocessing config/jgz.yml: contact_moment_folder)
