@@ -30,7 +30,44 @@ default:
     # Also export "excluding organisation X" results for the orgs above?
     export_excl: FALSE
 
+    # --- kaart (kaart/jgz_kaart.R) -------------------------------------------------
+    # Kansenkaart method on output/jgz_cohort.rds of the preprocessing: per area
+    # and group the outcome is regressed on the parental income percentile and
+    # predicted at Low/Mid/High (25/50/75); "all" = the mean. Same function as the
+    # national kaart (src/income_parents/*_01_expectation_function_income.R).
+    # Only children whose contact for that age was with an organisation in
+    # export_orgs are used (org_m<age>); "all" (pooled) areas only when
+    # export_pooled is TRUE.
+    # Outcomes: "all" = every y_m<age>_* column of the cohort file, or a list.
+    kaart_outcomes: "all"
+    # Areas: "org" (organisation of the contact), "pc3", "pc4" (GBA address at
+    # the contact used for that age: pc3_m<age>, pc4_m<age>)
+    kaart_region_types: ["org", "pc3", "pc4"]
+    # Groups, as in the national grid (src/income_parents/*_02_create_grid_income.R).
+    # Every combination is estimated for every area, so each extra group
+    # multiplies the run time; most PC4 cells of a split fail the CBS rules.
+    kaart_income_groups: ["all", "Low", "Mid", "High"]
+    kaart_gender_groups: ["all", "Men", "Women"]
+    kaart_migration_groups: ["all"]
+    kaart_household_groups: ["all"]
+    kaart_conf_level: 0.95
+    # CBS output rules, as in the national post-processing
+    # (src/income_parents/*_05_post_process_income.R): N >= 11 for a mean,
+    # N >= 12 for a regression (degrees of freedom), binary outcomes
+    # est * N >= 10 and (1 - est) * N >= 10, no continuous estimate of exactly
+    # 0, N rounded to tens.
+    kaart_min_n_mean: 11
+    kaart_min_n_regression: 12
+    kaart_min_count: 10
+    kaart_round_n: 10
+
   file_locations:
+    # Cohort file of the preprocessing (Opportunity-Preprocessing, cohort jgz):
+    # one row per child, outcomes y_m<age>_*, pc3/pc4/org per age. Input of the kaart.
+    cohort_file: "H:/Opportunity-Preprocessing/output/jgz_cohort.rds"
+    # Kaart results (kaart/jgz_kaart.R): estimates before and after the CBS rules
+    kaart_folder: "H:/JGZ-Pilot-Data/kaart"
+
     # Input from the preprocessing: one .rds per contact moment
     # (Opportunity-Preprocessing config/jgz.yml: contact_moment_folder)
     contact_moment_folder: "H:/JGZ-Pilot-Data/contact_moments"

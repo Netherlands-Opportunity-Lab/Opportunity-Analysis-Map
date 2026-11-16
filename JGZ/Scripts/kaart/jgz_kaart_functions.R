@@ -1,0 +1,129 @@
+# JGZ kaart -- functions
+#
+# Used by JGZ/Scripts/kaart/jgz_kaart.R; tested in tests/testthat/test-jgz-kaart.R.
+# The estimate itself is the national kansenkaart function kansenkaart_expect()
+# (src/income_parents/*_01_expectation_function_income.R), so the JGZ kaart uses
+# exactly the same model as kansenkaart.nl. What is JGZ-specific is only which
+# children and which area columns go in:
+#   - every age has its own area columns (pc3_m<age>, pc4_m<age>, org_m<age>:
+#     the GBA address and organisation at the contact used for that age);
+#   - only children seen by an organisation in export_orgs are used;
+#   - only children with a value for the outcome are passed, because
+#     kansenkaart_expect() reports n = nrow(data), not the number used by lm().
+
+
+# Load kansenkaart_expect() from the national kaart scripts. The version
+# prefix (A_2_0_M1_) exists on GitHub but not in the RA, so match on the end.
+source_expectation_function <- function(dir = "src/income_parents") {
+  f <- list.files(dir, "01_expectation_function_income\\.R$", full.names = TRUE)
+  if (length(f) != 1) stop("Expected one *01_expectation_function_income.R in ", dir, ", found ", length(f))
+  source(f, local = globalenv())
+  invisible(f)
+}
+
+# "y_m24_bmi_p90" -> "m24"
+outcome_age <- function(outcome) sub("^y_(m[0-9]+)_.*$", "\\1", outcome)
+
+# Outcomes in the cohort file: every y_m<age>_* column, or the configured list
+kaart_outcome_list <- function(cohort, setting = "all") {
+  all_y <- grep("^y_m[0-9]+_", names(cohort), value = TRUE)
+  if (identical(setting, "all")) return(all_y)
+  missing <- setdiff(unlist(setting), all_y)
+  if (length(missing) > 0) stop("kaart_outcomes not in the cohort file: ", paste(missing, collapse = ", "))
+  unlist(setting)
+}
+
+# Binary = only 0/1 values (flags, Wiechen, language delay, visus); otherwise
+# continuous (BMI, SDQ total score). Decides which CBS rules apply.
+is_binary <- function(x) {
+  v <- unique(x[!is.na(x)])
+  length(v) > 0 && all(v %in% c(0, 1))
+}
+
+# Columns kansenkaart_expect() filters on
+GROUP_COLUMNS <- c("income_parents_perc", "income_group", "income_group_tails", "sex",
+                   "migration_background", "has_migration", "type_household")
+
+# Children with a value for `outcome`, seen at that age by an organisation in
+# `export_orgs`, with that age's area columns renamed to org / pc3 / pc4 and a
+# constant column all = "all" (for pooled results).
+kaart_outcome_data <- function(cohort, outcome, export_orgs) {
+  age <- outcome_age(outcome)
+  area_cols <- c(org = paste0("org_", age), pc3 = paste0("pc3_", age), pc4 = paste0("pc4_", age))
+  missing <- setdiff(area_cols, names(cohort))
+  if (length(missing) > 0) stop(outcome, ": area columns missing in the cohort file: ", paste(missing, collapse = ", "))
+  keep <- intersect(GROUP_COLUMNS, names(cohort))
+  d <- cohort[!is.na(cohort[[outcome]]), c(outcome, unname(area_cols), keep), drop = FALSE]
+  names(d)[match(area_cols, names(d))] <- names(area_cols)
+  d <- d[!is.na(d$org) & d$org %in% export_orgs, , drop = FALSE]
+  d$org <- as.character(d$org)
+  d$pc3 <- as.character(d$pc3)
+  d$pc4 <- as.character(d$pc4)
+  d$all <- "all"
+  d
+}
+
+# Every combination of the configured groups
+kaart_groups <- function(income, gender, migration, household) {
+  expand.grid(income_group = unlist(income), gender_group = unlist(gender),
+              migration_group = unlist(migration), household_group = unlist(household),
+              stringsAsFactors = FALSE)
+}
+
+# Estimates for one outcome: every area of every region type x every group.
+# The data are split by area first, so kansenkaart_expect() only filters the
+# children of one area (this is what keeps the run time short). Areas with a
+# missing code (no GBA address at the contact) are left out.
+kaart_estimate_outcome <- function(d, outcome, region_types, groups, conf_level = 0.95) {
+  binary <- is_binary(d[[outcome]])
+  out <- list()
+  for (rt in region_types) {
+    d_rt <- d[!is.na(d[[rt]]) & d[[rt]] != "NA", , drop = FALSE]
+    parts <- split(d_rt, d_rt[[rt]])
+    for (id in names(parts)) {
+      dd <- parts[[id]]
+      res <- lapply(seq_len(nrow(groups)), function(i) {
+        r <- kansenkaart_expect(dd, outcome,
+                                income_grp = groups$income_group[i], migration_grp = groups$migration_group[i],
+                                gender_grp = groups$gender_group[i], hh_grp = groups$household_group[i],
+                                conf_level = conf_level)
+        c(r$est, r$lwr, r$upr, r$n)
+      })
+      m <- do.call(rbind, res)
+      out[[length(out) + 1]] <- data.frame(
+        outcome = outcome, binary = binary, groups,
+        region_type = rt, region_id = id,
+        n = as.integer(m[, 4]), est = m[, 1], lwr = m[, 2], upr = m[, 3],
+        stringsAsFactors = FALSE)
+    }
+  }
+  if (length(out) == 0) return(NULL)
+  do.call(rbind, out)
+}
+
+# CBS output rules of the national kaart post-processing
+# (src/income_parents/*_05_post_process_income.R, rules 1-4), applied in the
+# same order; the first rule that applies is kept in reason_of_na. Rule 5 there
+# (fewer than 3 schools) has no JGZ equivalent. Suppressed cells get est, lwr,
+# upr and n = NA; n is rounded to tens.
+kaart_disclosure <- function(res, min_n_mean = 11, min_n_regression = 12, min_count = 10, round_n = 10) {
+  res$reason_of_na <- NA_character_
+  hide <- function(res, rule, reason) {
+    rule <- rule & is.na(res$reason_of_na)
+    rule[is.na(rule)] <- FALSE
+    res$reason_of_na[rule] <- reason
+    res[rule, c("est", "lwr", "upr")] <- NA
+    res$n[rule] <- NA
+    res
+  }
+  is_all <- res$income_group == "all"
+  res <- hide(res, is_all & res$n < min_n_mean, paste0("1. fewer than ", min_n_mean, " obs"))
+  res <- hide(res, !is_all & res$n < min_n_regression, paste0("1. fewer than ", min_n_regression, " obs"))
+  # a regression that could not be estimated (e.g. no variation in income)
+  res <- hide(res, is.na(res$est), "0. no estimate")
+  res <- hide(res, res$binary & res$est * res$n < min_count, paste0("2. est*n < ", min_count))
+  res <- hide(res, res$binary & (1 - res$est) * res$n < min_count, paste0("3. (1-est)*n < ", min_count))
+  res <- hide(res, !res$binary & res$est == 0, "4. est == 0")
+  res$n <- as.integer(round(res$n / round_n) * round_n)
+  res
+}
