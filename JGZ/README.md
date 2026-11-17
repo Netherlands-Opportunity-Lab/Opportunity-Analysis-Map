@@ -19,7 +19,7 @@ They are written for the CBS RA versions (R 3.6.2, dplyr 1.0.2).
 | Script | Input | Output | What it does |
 |---|---|---|---|
 | `kaart/jgz_kaart.R` | `output/jgz_cohort.rds` (preprocessing, cohort `jgz`) | `jgz_kaart_estimates.rds` (internal), `jgz_kaart_results.rds/.csv` | **Kaart with the kansenkaart method** (16-11-2026): per outcome, area (organisation, PC3, PC4 at the contact used for that age) and group, `kansenkaart_expect()` of the national kaart (`src/income_parents/*_01_expectation_function_income.R`): the mean for income "all", `lm(outcome ~ income_parents_perc)` predicted at 25/50/75 for Low/Mid/High. Only children seen by an organisation in `export_orgs`. CBS rules as the national post-processing (rules 1-4, `n` rounded to tens). Groups and rules in `config.yml` (`kaart_*`). Functions in `kaart/jgz_kaart_functions.R`, tests in `tests/testthat/test-jgz-kaart.R` |
-| `kloof/jgz_kloof.R` | `output/jgz_cohort.rds` | `jgz_kloof_results.rds/.csv` | **Kloof with the kansenkloof method** (16-11-2026), as Opportunity-Analysis-Gap: per outcome, parental measure (income, wealth: raw amounts) and subgroup (organisation x sex x migration x household type) the mean and the mean per bin (`ntile` within the subgroup; 20 bins from 1000 children, 10 and 5 averaged from them; 10/5 bins directly below that). Gap thresholds and CBS rules (N >= 50 per cell, binary N*mean and N*(1-mean) >= 10, whole set of bins suppressed when one fails). Only `export_orgs`; differences with Gap listed in `kloof/jgz_kloof_functions.R`. About 1 minute on a synthetic cohort |
+| *(kloof)* | | | **Moved to Opportunity-Analysis-Gap** (`JGZ/jgz_kloof.R`, 17-11-2026), so it uses Gap's own functions and thresholds. `export_orgs` / `export_pooled` must be the same in both repos; the Gap script stops when they differ |
 | `bereik/jgz_bereik.R` | `output/jgz_catchment_cohort.rds` (preprocessing, cohort `jgz_catchment`) | `jgz_bereik_estimates.rds` (internal), `jgz_bereik_results.rds/.csv` | **Bereik per catchment area, PC3 and PC4** (16-11-2026): share of the children living in the area who were seen at 2y / 3y / 3y9m, always and at least once (same denominator). Same estimate and CBS rules as the kaart; only catchment areas of `export_orgs` (`org_catchment_codes` maps 1-4 to 6/7/10/12) |
 | `map/jgz_map_tables.R` | `cm_<visit>.rds` (preprocessing 02) | `jgz_maps_{bmi,wiechen,sdq}.xlsx` | BMI / Wiechen / SDQ per PC3 and PC4, one measurement per child per visit (the one closest to the nominal age, `target_age`), small-cell suppression |
 | `gradients/jgz_tidy_gradients.R` | gradient Excel files | `*_tidy.xlsx` | Reshapes gradient output (20 income bins) from wide to long |
@@ -56,7 +56,7 @@ Not in this repository: the script that produces the gradient output that
   `filter_options` uses "Turkey" and `d_has_migration_background`, while the
   preprocessing writes "Turkiye" and `has_migration`; if the Gap samples use the
   preprocessing names, those Gap subgroups are empty. The JGZ kloof uses the
-  cohort file's labels.
+  cohort file's labels (Opportunity-Analysis-Gap/JGZ).
 - **Bereik with near-100% take-up.** `y_m45_takeup_any` is close to 1, so
   (1 - est) * n < 10 suppresses it in most PC4s. Consider exporting it only per
   organisation / PC3.
