@@ -21,11 +21,15 @@ default:
     sdq_cutoffs: [11, 14]
 
     # --- export bundle (export/jgz_export_bundle.R) ------------------------------
-    # Organisations whose results may be exported (6 LimburgNoord, 7 ZONL,
-    # 10 Verian, 12 org12). Only include organisations that gave permission.
+    # Organisations whose results are exported in this run (6 LimburgNoord,
+    # 7 ZONL, 10 Verian, 12 org12). Permission to publish per organisation:
+    # 6, 7 and 10 yes (meetings 21-09 and 20-10-2026); 12 no, never include it.
+    # [7, 10] is a selection, not the permission list: it comes from the 2026
+    # export script, which only took 7 and 10 (Limburg-Noord was in the
+    # 27-03-2025 export). Add 6 when Limburg-Noord should be in the export.
     export_orgs: [7, 10]
-    # Also export pooled results (all organisations together)? Only when every
-    # organisation in the pool gave permission.
+    # Also export pooled results (all four organisations together)? Allowed
+    # since 17-11-2026, but never shown together with per-organisation results.
     export_pooled: FALSE
     # Also export "excluding organisation X" results for the orgs above?
     export_excl: FALSE
