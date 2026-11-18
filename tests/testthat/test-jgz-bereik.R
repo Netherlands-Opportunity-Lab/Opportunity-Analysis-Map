@@ -17,6 +17,15 @@ test_that("bereik_data maps catchment areas to organisation codes and keeps expo
   expect_equal(res$n[res$region_type == "org" & res$region_id == "7"], 1L)
 })
 
+test_that("bereik_data also takes org_catchment as organisation codes, and stops when nothing is left", {
+  oc <- list(`1` = 6, `2` = 7, `3` = 10, `4` = 12)
+  catch <- data.frame(org_catchment = c(6, 7, 10, 12, 7), postcode_4 = c(5911, 8301, 7311, 6211, 8302),
+                      y_m24_takeup = 1)
+  expect_equal(bereik_data(catch, oc, c(7, 10))$org, c("7", "10", "7"))
+  expect_error(bereik_data(catch, oc, c(99)), "No children")
+  expect_error(bereik_data(transform(catch, org_catchment = c(6, 7, 10, 12, 55)), oc, 7), "neither")
+})
+
 test_that("JGZ/config.yml has the bereik settings", {
   cfg <- config::get("settings", file = file.path(root, "JGZ", "config.yml"))
   loc <- config::get("file_locations", file = file.path(root, "JGZ", "config.yml"))

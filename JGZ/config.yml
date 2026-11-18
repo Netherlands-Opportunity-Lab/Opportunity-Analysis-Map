@@ -71,7 +71,9 @@ default:
     # no parental income percentile).
     bereik_region_types: ["org", "pc3", "pc4"]
     bereik_gender_groups: ["all"]
-    # org_catchment (1-4) -> org code (6, 7, 10, 12), so export_orgs applies
+    # org_catchment area number (1-4, Coen's Stata file) -> org code (6, 7, 10,
+    # 12), so export_orgs applies. The R rebuild (jgz_catchment_cohort.rds)
+    # already stores the org codes; bereik_data() then uses them as they are.
     org_catchment_codes: {"1": 6, "2": 7, "3": 10, "4": 12}
 
   file_locations:
