@@ -39,6 +39,25 @@ Not in this repository: the script that produces the gradient output that
 | `map/pc4_map_JGZ.R`, `map/2e_maps_absolute.R`, `map/2g_maps_selected.R` | Maps of the exported results |
 | `webmapper/jgz_to_webmapper.R` | Exported results in the webmapper format |
 
+## Organisations and names (20-11-2026)
+
+- **Pooling.** Only the organisations that gave permission are pooled.
+  `permitted_orgs` (6, 7, 10) is the permission list; `export_orgs` must be
+  within it, and every run stops otherwise (`jgz_check_orgs()`). In the kaart,
+  bereik and kloof "pooled" = the children of `export_orgs` only, so never
+  org 12: a total with org 12 next to per-organisation results lets org 12 be
+  backed out. The old export bundle refuses `export_pooled` (its pooled map
+  tables cover all four organisations) and `export_excl`.
+- **Internal run for org 12.** `internal_orgs: [12]`: the kaart and bereik are
+  also run for org 12 and written to `<results folder>/internal/INTERNAL_*`.
+  Internal use only, never exported; `internal_orgs` may not overlap with
+  `export_orgs`. The Gap kloof does the same (`settings$jgz$internal_orgs`).
+- **Variable names.** Outcomes are `m<age in months, 3 digits>_<outcome>`
+  (e.g. `m024_bmi_p90`; was `y_m24_bmi_p90`), with `pc4_m024`, `org_m024`,
+  `income_parents_perc_m024`. Old cohort files are still read. The webmapper
+  CSVs of version 1_0 (`webmapper/jgz_to_webmapper.R`, old exports) keep their
+  file names.
+
 ## Open points
 
 - **Kaart run time (benchmark on a synthetic cohort of 115,160 children, 68
@@ -61,7 +80,7 @@ Not in this repository: the script that produces the gradient output that
   preprocessing writes "Turkiye" and `has_migration`; if the Gap samples use the
   preprocessing names, those Gap subgroups are empty. The JGZ kloof uses the
   cohort file's labels (Opportunity-Analysis-Gap/JGZ).
-- **Bereik with near-100% take-up.** `y_m45_takeup_any` is close to 1, so
+- **Bereik with near-100% take-up.** `m045_takeup_any` is close to 1, so
   (1 - est) * n < 10 suppresses it in most PC4s. Consider exporting it only per
   organisation / PC3.
 - **Kaart and the old map tables.** `map/jgz_map_tables.R` (shares from the

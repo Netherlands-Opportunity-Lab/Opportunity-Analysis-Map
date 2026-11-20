@@ -28,11 +28,25 @@ default:
     # export script, which only took 7 and 10 (Limburg-Noord was in the
     # 27-03-2025 export). Add 6 when Limburg-Noord should be in the export.
     export_orgs: [7, 10]
-    # Also export pooled results (all four organisations together)? Allowed
-    # since 17-11-2026, but never shown together with per-organisation results.
+    # The organisations that gave permission to publish per organisation. Every
+    # run checks that export_orgs is a subset (jgz_check_orgs()).
+    permitted_orgs: [6, 7, 10]
+    # Pooled results (Bastian, 20-11-2026): only over the permitted
+    # organisations. A total that includes org 12 next to per-organisation
+    # results lets org 12 be backed out, and if its name leaked so would the
+    # results of all its children. So in the kaart, bereik and kloof "pooled" =
+    # the children of export_orgs only (never 12). The old export bundle's
+    # pooled files (map tables) cover all four organisations: with
+    # export_pooled TRUE it stops.
     export_pooled: FALSE
-    # Also export "excluding organisation X" results for the orgs above?
+    # "Excluding organisation X" results: excluding a permitted organisation
+    # still contains org 12, so together with the per-organisation results it
+    # backs org 12 out. Not allowed (20-11-2026): the export bundle stops when TRUE.
     export_excl: FALSE
+    # Internal run (Bastian, 20-11-2026): the kaart and bereik are also run for
+    # these organisations, NOT for export, written to <results folder>/internal
+    # (file names with "INTERNAL"). Never in export_orgs. [] = no internal run.
+    internal_orgs: [12]
 
     # --- kaart (kaart/jgz_kaart.R) -------------------------------------------------
     # Kansenkaart method on output/jgz_cohort.rds of the preprocessing: per area
@@ -44,7 +58,7 @@ default:
     # export_pooled is TRUE.
     # export_orgs / export_pooled are also in the Gap repo's config (settings$jgz,
     # JGZ kloof); its JGZ/jgz_kloof.R stops when the two differ.
-    # Outcomes: "all" = every y_m<age>_* column of the cohort file, or a list.
+    # Outcomes: "all" = every m<age>_* column of the cohort file, or a list.
     kaart_outcomes: "all"
     # Areas: "org" (organisation of the contact), "pc3", "pc4" (GBA address at
     # the contact used for that age: pc3_m<age>, pc4_m<age>)
@@ -82,7 +96,7 @@ default:
 
   file_locations:
     # Cohort file of the preprocessing (Opportunity-Preprocessing, cohort jgz):
-    # one row per child, outcomes y_m<age>_*, pc3/pc4/org per age. Input of the kaart.
+    # one row per child, outcomes m<age>_*, pc3/pc4/org per age. Input of the kaart.
     cohort_file: "H:/Opportunity-Preprocessing/output/jgz_cohort.rds"
     # Kaart results (kaart/jgz_kaart.R): estimates before and after the CBS rules
     kaart_folder: "H:/JGZ-Pilot-Data/kaart"

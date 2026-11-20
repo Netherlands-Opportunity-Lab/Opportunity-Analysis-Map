@@ -3,11 +3,13 @@
 #
 #   Input : loc$catchment_cohort_file (output/jgz_catchment_cohort.rds of
 #           Opportunity-Preprocessing, cohort jgz_catchment: one row per child
-#           living in a catchment area; y_m24/m36/m45_takeup,
-#           y_m45_takeup_always, y_m45_takeup_any; org_catchment, postcode_4)
+#           living in a catchment area; m024/m036/m045_takeup,
+#           m045_takeup_always, m045_takeup_any; org_catchment, postcode_4)
 #   Output: loc$bereik_results_folder/
 #             jgz_bereik_estimates.rds  exact n (internal, never export)
 #             jgz_bereik_results.rds / .csv  after the CBS rules
+#             internal/INTERNAL_jgz_bereik_*  the same for internal_orgs (org 12):
+#                                    internal use only, NEVER export (20-11-2026)
 #
 # Bereik is about where the child lives, not which organisation saw it
 # (27-10-2026), so the areas are the catchment area (org_catchment) and the
@@ -26,10 +28,11 @@ source_expectation_function("src/income_parents")
 source("JGZ/Scripts/bereik/jgz_bereik_functions.R")
 
 
+jgz_check_orgs(cfg)
 ensure_dir(loc$bereik_results_folder)
 catch <- readRDS(loc$catchment_cohort_file)
 d_all <- bereik_data(catch, cfg$org_catchment_codes, cfg$export_orgs)
-outcomes <- grep("^y_m[0-9]+_takeup", names(d_all), value = TRUE)
+outcomes <- grep("^(y_)?m[0-9]+_takeup", names(d_all), value = TRUE)   # m024_takeup (old: y_m24_takeup)
 
 region_types <- unlist(cfg$bereik_region_types)
 if (isTRUE(cfg$export_pooled)) region_types <- c("all", region_types)
@@ -55,3 +58,21 @@ print(estimates[estimates$region_type == "org", c("outcome", "region_id", "n", "
 message("Share published per region type:")
 print(results %>% group_by(region_type) %>%
         summarise(areas = n_distinct(region_id), published = mean(is.na(reason_of_na)), .groups = "drop"))
+
+
+# ---- Internal run (internal_orgs, e.g. org 12): never export ------------------------------
+if (length(unlist(cfg$internal_orgs)) > 0) {
+  internal_folder <- ensure_dir(file.path(loc$bereik_results_folder, "internal"))
+  message("INTERNAL run for organisation(s) ", paste(unlist(cfg$internal_orgs), collapse = ", "),
+          " (not for export) -> ", internal_folder)
+  d_int <- bereik_data(catch, cfg$org_catchment_codes, unlist(cfg$internal_orgs))
+  est_int <- do.call(rbind, lapply(outcomes, function(oc) {
+    d <- d_int[!is.na(d_int[[oc]]), , drop = FALSE]
+    kaart_estimate_outcome(d, oc, unlist(cfg$bereik_region_types), groups, conf_level = cfg$kaart_conf_level)
+  }))
+  saveRDS(est_int, file.path(internal_folder, "INTERNAL_jgz_bereik_estimates.rds"))
+  res_int <- kaart_disclosure(est_int,
+                              min_n_mean = cfg$kaart_min_n_mean, min_n_regression = cfg$kaart_min_n_regression,
+                              min_count = cfg$kaart_min_count, round_n = cfg$kaart_round_n)
+  saveRDS(res_int, file.path(internal_folder, "INTERNAL_jgz_bereik_results.rds"))
+}

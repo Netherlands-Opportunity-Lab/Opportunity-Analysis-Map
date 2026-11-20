@@ -21,12 +21,17 @@ source_expectation_function <- function(dir = "src/income_parents") {
   invisible(f)
 }
 
-# "y_m24_bmi_p90" -> "m24"
-outcome_age <- function(outcome) sub("^y_(m[0-9]+)_.*$", "\\1", outcome)
+# Outcome names (20-11-2026): the age in months first, three digits, as c16_
+# in the other cohorts: "m024_bmi_p90". Cohort files from before 20-11-2026
+# have "y_m24_bmi_p90"; both are recognised.
+OUTCOME_PATTERN <- "^(y_)?m[0-9]+_"
 
-# Outcomes in the cohort file: every y_m<age>_* column, or the configured list
+# "m024_bmi_p90" -> "m024" (old: "y_m24_bmi_p90" -> "m24")
+outcome_age <- function(outcome) sub("^(y_)?(m[0-9]+)_.*$", "\\2", outcome)
+
+# Outcomes in the cohort file: every m<age>_* column, or the configured list
 kaart_outcome_list <- function(cohort, setting = "all") {
-  all_y <- grep("^y_m[0-9]+_", names(cohort), value = TRUE)
+  all_y <- grep(OUTCOME_PATTERN, names(cohort), value = TRUE)
   if (identical(setting, "all")) return(all_y)
   missing <- setdiff(unlist(setting), all_y)
   if (length(missing) > 0) stop("kaart_outcomes not in the cohort file: ", paste(missing, collapse = ", "))
@@ -123,6 +128,21 @@ kaart_estimate_outcome <- function(d, outcome, region_types, groups, conf_level 
   }
   if (length(out) == 0) return(NULL)
   do.call(rbind, out)
+}
+
+# Estimates for every outcome, for the children of organisations `orgs`
+kaart_run <- function(cohort, outcomes, orgs, region_types, groups, conf_level = 0.95) {
+  estimates <- vector("list", length(outcomes))
+  for (k in seq_along(outcomes)) {
+    oc <- outcomes[k]
+    t0 <- Sys.time()
+    d <- kaart_outcome_data(cohort, oc, orgs)
+    estimates[[k]] <- kaart_estimate_outcome(d, oc, region_types, groups, conf_level = conf_level)
+    message(sprintf("  [%d/%d] %s: %d children, %d estimates, %.1f s", k, length(outcomes), oc, nrow(d),
+                    if (is.null(estimates[[k]])) 0L else nrow(estimates[[k]]),
+                    as.numeric(difftime(Sys.time(), t0, units = "secs"))))
+  }
+  do.call(rbind, estimates)
 }
 
 # CBS output rules of the national kaart post-processing

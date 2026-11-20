@@ -15,69 +15,79 @@ toy_cohort <- function(n = 400, seed = 1) {
                                     perc >= .65 & perc <= .85 ~ "High"), levels = c("Low", "Mid", "High")),
     income_group_tails = NA, sex = rep(c("Men", "Women"), length.out = n),
     migration_background = "No Migration Background", has_migration = 0, type_household = "Two Parents",
-    y_m24_bmi = 16 + perc + rnorm(n, 0, .5),
-    y_m24_bmi_p90 = as.integer(runif(n) < .3 - .2 * perc),
-    pc4_m24 = rep(c(1011, 1012, 2021, 3031), length.out = n), pc3_m24 = rep(c(101, 101, 202, 303), length.out = n),
-    org_m24 = rep(c(7, 7, 10, 6), length.out = n),
-    y_m45_visus = c(NA, rbinom(n - 1, 1, .2)),
-    pc4_m45 = 1011, pc3_m45 = 101, org_m45 = rep(c(7, 12), length.out = n),
+    m024_bmi = 16 + perc + rnorm(n, 0, .5),
+    m024_bmi_p90 = as.integer(runif(n) < .3 - .2 * perc),
+    pc4_m024 = rep(c(1011, 1012, 2021, 3031), length.out = n), pc3_m024 = rep(c(101, 101, 202, 303), length.out = n),
+    org_m024 = rep(c(7, 7, 10, 6), length.out = n),
+    m045_visus = c(NA, rbinom(n - 1, 1, .2)),
+    pc4_m045 = 1011, pc3_m045 = 101, org_m045 = rep(c(7, 12), length.out = n),
     stringsAsFactors = FALSE)
 }
 
 test_that("outcome_age and the outcome list", {
-  expect_equal(outcome_age(c("y_m24_bmi_p90", "y_m120_sdq", "y_m45_questions2_can")), c("m24", "m120", "m45"))
+  expect_equal(outcome_age(c("m024_bmi_p90", "m120_sdq", "m045_questions2_can")), c("m024", "m120", "m045"))
   co <- toy_cohort()
+  expect_equal(kaart_outcome_list(co), c("m024_bmi", "m024_bmi_p90", "m045_visus"))
+  expect_equal(kaart_outcome_list(co, list("m045_visus")), "m045_visus")
+  expect_error(kaart_outcome_list(co, list("m099_x")), "not in the cohort file")
+})
+
+test_that("cohort files with the old names (y_m24_*) still work", {
+  co <- toy_cohort()
+  names(co) <- sub("^m0?([0-9]+)_", "y_m\\1_", names(co))
+  names(co) <- sub("_m0?([0-9]+)$", "_m\\1", names(co))
+  expect_equal(outcome_age("y_m24_bmi_p90"), "m24")
   expect_equal(kaart_outcome_list(co), c("y_m24_bmi", "y_m24_bmi_p90", "y_m45_visus"))
-  expect_equal(kaart_outcome_list(co, list("y_m45_visus")), "y_m45_visus")
-  expect_error(kaart_outcome_list(co, list("y_m99_x")), "not in the cohort file")
+  d <- kaart_outcome_data(co, "y_m45_visus", export_orgs = 7)
+  expect_equal(nrow(d), sum(!is.na(co$y_m45_visus) & co$org_m45 == 7))
 })
 
 test_that("kaart_outcome_data uses that age's areas, only export orgs and only children with a value", {
   co <- toy_cohort()
-  d <- kaart_outcome_data(co, "y_m45_visus", export_orgs = c(7, 10))
+  d <- kaart_outcome_data(co, "m045_visus", export_orgs = c(7, 10))
   expect_true(all(d$org == "7"))                          # org 12 dropped
-  expect_false(anyNA(d$y_m45_visus))                      # child 1 has no value
-  expect_equal(nrow(d), sum(!is.na(co$y_m45_visus) & co$org_m45 == 7))
-  d24 <- kaart_outcome_data(co, "y_m24_bmi", export_orgs = c(7, 10))
+  expect_false(anyNA(d$m045_visus))                      # child 1 has no value
+  expect_equal(nrow(d), sum(!is.na(co$m045_visus) & co$org_m045 == 7))
+  d24 <- kaart_outcome_data(co, "m024_bmi", export_orgs = c(7, 10))
   expect_setequal(unique(d24$pc4), c("1011", "1012", "2021"))  # 3031 belongs to org 6
-  expect_error(kaart_outcome_data(co[, setdiff(names(co), "pc3_m45")], "y_m45_visus", 7), "pc3_m45")
+  expect_error(kaart_outcome_data(co[, setdiff(names(co), "pc3_m045")], "m045_visus", 7), "pc3_m045")
 })
 
 test_that("kaart_outcome_data takes the parental income of the outcome's age", {
   co <- toy_cohort()
-  # cohort file with income per age: m24 and m45 get different percentiles
-  co$income_parents_perc_m24 <- co$income_parents_perc
-  co$income_group_m24 <- co$income_group
-  co$income_group_tails_m24 <- co$income_group_tails
-  co$income_parents_perc_m45 <- 1 - co$income_parents_perc
-  co$income_parents_perc_m45[1:10] <- NA
-  co$income_group_m45 <- factor(ifelse(co$income_parents_perc_m45 <= .35 & co$income_parents_perc_m45 >= .15, "Low", NA),
+  # cohort file with income per age: m024 and m045 get different percentiles
+  co$income_parents_perc_m024 <- co$income_parents_perc
+  co$income_group_m024 <- co$income_group
+  co$income_group_tails_m024 <- co$income_group_tails
+  co$income_parents_perc_m045 <- 1 - co$income_parents_perc
+  co$income_parents_perc_m045[1:10] <- NA
+  co$income_group_m045 <- factor(ifelse(co$income_parents_perc_m045 <= .35 & co$income_parents_perc_m045 >= .15, "Low", NA),
                                 levels = c("Low", "Mid", "High"))
-  co$income_group_tails_m45 <- NA
+  co$income_group_tails_m045 <- NA
   co$income_parents_perc <- NULL; co$income_group <- NULL; co$income_group_tails <- NULL
-  d45 <- kaart_outcome_data(co, "y_m45_visus", export_orgs = c(7, 10))
-  ok <- !is.na(co$y_m45_visus) & co$org_m45 == 7 & !is.na(co$income_parents_perc_m45)
-  expect_equal(nrow(d45), sum(ok))                        # no income at m45 -> left out
-  expect_equal(d45$income_parents_perc, co$income_parents_perc_m45[ok])
-  expect_false(any(grepl("_m45$|_m24$", setdiff(names(d45), c("y_m45_visus")))))
-  d24 <- kaart_outcome_data(co, "y_m24_bmi", export_orgs = c(7, 10))
-  expect_equal(d24$income_parents_perc, co$income_parents_perc_m24[co$org_m24 %in% c(7, 10)])
+  d45 <- kaart_outcome_data(co, "m045_visus", export_orgs = c(7, 10))
+  ok <- !is.na(co$m045_visus) & co$org_m045 == 7 & !is.na(co$income_parents_perc_m045)
+  expect_equal(nrow(d45), sum(ok))                        # no income at m045 -> left out
+  expect_equal(d45$income_parents_perc, co$income_parents_perc_m045[ok])
+  expect_false(any(grepl("_m045$|_m024$", setdiff(names(d45), c("m045_visus")))))
+  d24 <- kaart_outcome_data(co, "m024_bmi", export_orgs = c(7, 10))
+  expect_equal(d24$income_parents_perc, co$income_parents_perc_m024[co$org_m024 %in% c(7, 10)])
   # an age without an income column in a per-age file is an error
-  co2 <- co; co2$income_parents_perc_m45 <- NULL
-  expect_error(kaart_outcome_data(co2, "y_m45_visus", 7), "not for m45")
+  co2 <- co; co2$income_parents_perc_m045 <- NULL
+  expect_error(kaart_outcome_data(co2, "m045_visus", 7), "not for m045")
 })
 
 test_that("estimates: mean for 'all', regression prediction for income groups, exact n", {
   co <- toy_cohort()
-  d <- kaart_outcome_data(co, "y_m24_bmi", export_orgs = c(7, 10))
+  d <- kaart_outcome_data(co, "m024_bmi", export_orgs = c(7, 10))
   groups <- kaart_groups(c("all", "Low"), c("all", "Men"), "all", "all")
-  res <- kaart_estimate_outcome(d, "y_m24_bmi", c("org", "pc4"), groups)
+  res <- kaart_estimate_outcome(d, "m024_bmi", c("org", "pc4"), groups)
   expect_false(res$binary[1])
   r <- res[res$region_type == "pc4" & res$region_id == "1011" & res$income_group == "all" & res$gender_group == "all", ]
-  expect_equal(r$est, mean(d$y_m24_bmi[d$pc4 == "1011"]))
+  expect_equal(r$est, mean(d$m024_bmi[d$pc4 == "1011"]))
   expect_equal(r$n, sum(d$pc4 == "1011"))
   dl <- d[d$org == "7" & d$income_group %in% "Low" & d$sex == "Men", ]
-  fit <- lm(y_m24_bmi ~ income_parents_perc, data = dl)
+  fit <- lm(m024_bmi ~ income_parents_perc, data = dl)
   r2 <- res[res$region_type == "org" & res$region_id == "7" & res$income_group == "Low" & res$gender_group == "Men", ]
   expect_equal(r2$est, unname(predict(fit, data.frame(income_parents_perc = .25))))
   expect_equal(r2$n, nrow(dl))
@@ -110,4 +120,27 @@ test_that("JGZ/config.yml has the kaart settings and paths", {
   }
   expect_false(is.null(loc$cohort_file)); expect_false(is.null(loc$kaart_folder))
   expect_true(all(unlist(cfg$kaart_region_types) %in% c("org", "pc3", "pc4")))
+})
+
+test_that("organisation settings: export only permitted orgs, internal orgs never exported (20-11-2026)", {
+  old <- setwd(root); on.exit(setwd(old))
+  env <- new.env()
+  sys.source("JGZ/Scripts/jgz_helpers.R", envir = env)
+  expect_true(env$jgz_check_orgs(env$cfg))                         # the config in the repo passes
+  expect_false(any(c(12) %in% unlist(env$cfg$export_orgs)))
+  ok <- list(export_orgs = c(7, 10), permitted_orgs = c(6, 7, 10), internal_orgs = 12)
+  expect_true(env$jgz_check_orgs(ok))
+  expect_error(env$jgz_check_orgs(modifyList(ok, list(export_orgs = c(7, 12)))), "without permission: 12")
+  expect_error(env$jgz_check_orgs(modifyList(ok, list(internal_orgs = 7))), "both export_orgs and internal_orgs")
+  expect_error(env$jgz_check_orgs(modifyList(ok, list(permitted_orgs = NULL))), "permitted_orgs is not set")
+})
+
+test_that("kaart_run: pooled 'all' only over the organisations passed (export run never contains org 12)", {
+  co <- toy_cohort()
+  groups <- kaart_groups("all", "all", "all", "all")
+  ex <- suppressMessages(kaart_run(co, "m045_visus", c(7, 10), c("all", "org"), groups))
+  expect_setequal(ex$region_id[ex$region_type == "org"], "7")
+  expect_equal(ex$n[ex$region_type == "all"], sum(!is.na(co$m045_visus) & co$org_m045 == 7))
+  int <- suppressMessages(kaart_run(co, "m045_visus", 12, "org", groups))
+  expect_setequal(int$region_id, "12")
 })

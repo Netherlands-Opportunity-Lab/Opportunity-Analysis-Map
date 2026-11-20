@@ -24,6 +24,25 @@ ensure_dir <- function(path) {
 # Organisation codes used in the JGZ files
 ORG_CODES <- c(LimburgNoord = 6, ZONL = 7, Verian = 10, org12 = 12)   # 4th organisation: never name it in public files
 
+# Stop when the organisation settings would export (or pool) an organisation
+# without permission (20-11-2026): export_orgs must be within permitted_orgs,
+# and internal_orgs (internal run only) must not be in export_orgs.
+jgz_check_orgs <- function(cfg) {
+  export   <- as.numeric(unlist(cfg$export_orgs))
+  permit   <- as.numeric(unlist(cfg$permitted_orgs))
+  internal <- as.numeric(unlist(cfg$internal_orgs))
+  if (length(permit) == 0) stop("permitted_orgs is not set in JGZ/config.yml.")
+  if (length(setdiff(export, permit)) > 0) {
+    stop("export_orgs contains organisation(s) without permission: ",
+         paste(setdiff(export, permit), collapse = ", "), " (permitted_orgs: ", paste(permit, collapse = ", "), ").")
+  }
+  if (length(intersect(export, internal)) > 0) {
+    stop("Organisation(s) ", paste(intersect(export, internal), collapse = ", "),
+         " are in both export_orgs and internal_orgs.")
+  }
+  invisible(TRUE)
+}
+
 
 # ---- Disclosure control (map tables, export) ------------------------------------
 

@@ -47,6 +47,17 @@ suppressPackageStartupMessages({
 ensure_dir(loc$export_folder)
 using_folder <- ensure_dir(file.path(loc$export_folder, "using data"))
 
+jgz_check_orgs(cfg)
+# 20-11-2026 (Bastian): no total that contains organisation 12 next to
+# per-organisation results. The pooled files of the map tables cover all four
+# organisations, and "excluding X" files still contain 12, so both are refused.
+if (isTRUE(cfg$export_pooled)) {
+  stop("export_pooled = TRUE: the pooled files of the map tables cover all four organisations (incl. 12), ",
+       "which together with per-organisation results backs org 12 out. Not allowed since 20-11-2026.")
+}
+if (isTRUE(cfg$export_excl)) {
+  stop("export_excl = TRUE: 'excluding organisation X' results still contain org 12. Not allowed since 20-11-2026.")
+}
 EXPORT_ORGS <- unlist(cfg$export_orgs)
 message("Exporting organisations: ", paste(EXPORT_ORGS, collapse = ", "),
         if (isTRUE(cfg$export_pooled)) " + pooled" else "",
