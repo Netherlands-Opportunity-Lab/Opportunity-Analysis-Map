@@ -13,9 +13,11 @@
 # 25th/50th/75th percentile for Low/Mid/High, and the mean for income "all".
 # Settings (groups, areas, CBS rules): JGZ/config.yml, "kaart".
 #
-# Note: income_parents_perc in the JGZ cohort is ranked within the JGZ cohort
-# (per birth year), not nationally, so Low/Mid/High are not the same incomes as
-# on kansenkaart.nl. To decide with Bastian (see the preprocessing README).
+# Parental income (20-11-2026): for an outcome y_<age>_* the cohort's
+# income_parents_perc_<age> is used: the mother's household income over the 5
+# years up to the year the child reaches that age (2024 prices), ranked among
+# all children in NL reaching that age in the same year. Children without an
+# income at that age are left out.
 #
 # Run from the repository root:
 #   setwd("H:/Opportunity-Analysis-Map"); source("JGZ/Scripts/kaart/jgz_kaart.R")

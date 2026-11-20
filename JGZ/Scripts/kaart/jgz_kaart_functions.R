@@ -44,17 +44,41 @@ is_binary <- function(x) {
 GROUP_COLUMNS <- c("income_parents_perc", "income_group", "income_group_tails", "sex",
                    "migration_background", "has_migration", "type_household")
 
-# Children with a value for `outcome`, seen at that age by an organisation in
-# `export_orgs`, with that age's area columns renamed to org / pc3 / pc4 and a
-# constant column all = "all" (for pooled results).
+# The parental income columns for one outcome age. Since 20-11-2026 the JGZ
+# cohort has parental income per outcome age (income_parents_perc_<age>,
+# income_group_<age>, income_group_tails_<age>: mean over the 5 years up to the
+# year the child reaches that age, ranked among all children in NL reaching it
+# that year). Older cohort files have one income per child (no suffix).
+income_columns <- function(cohort, age) {
+  by_age <- c(income_parents_perc = paste0("income_parents_perc_", age),
+              income_group        = paste0("income_group_", age),
+              income_group_tails  = paste0("income_group_tails_", age))
+  if (by_age[["income_parents_perc"]] %in% names(cohort)) return(by_age[by_age %in% names(cohort)])
+  if (any(grepl("^income_parents_perc_m[0-9]+$", names(cohort)))) {
+    stop("The cohort file has parental income per age, but not for ", age, ".")
+  }
+  generic <- c(income_parents_perc = "income_parents_perc", income_group = "income_group",
+               income_group_tails = "income_group_tails")
+  generic[generic %in% names(cohort)]
+}
+
+# Children with a value for `outcome` and a parental income at that age, seen at
+# that age by an organisation in `export_orgs`, with that age's area columns
+# renamed to org / pc3 / pc4, that age's income columns renamed to
+# income_parents_perc / income_group / income_group_tails, and a constant
+# column all = "all" (for pooled results).
 kaart_outcome_data <- function(cohort, outcome, export_orgs) {
   age <- outcome_age(outcome)
   area_cols <- c(org = paste0("org_", age), pc3 = paste0("pc3_", age), pc4 = paste0("pc4_", age))
   missing <- setdiff(area_cols, names(cohort))
   if (length(missing) > 0) stop(outcome, ": area columns missing in the cohort file: ", paste(missing, collapse = ", "))
-  keep <- intersect(GROUP_COLUMNS, names(cohort))
-  d <- cohort[!is.na(cohort[[outcome]]), c(outcome, unname(area_cols), keep), drop = FALSE]
+  inc_cols <- income_columns(cohort, age)
+  if (!"income_parents_perc" %in% names(inc_cols)) stop(outcome, ": no parental income column in the cohort file.")
+  keep <- setdiff(intersect(GROUP_COLUMNS, names(cohort)), c(names(inc_cols), unname(inc_cols)))
+  rows <- !is.na(cohort[[outcome]]) & !is.na(cohort[[inc_cols[["income_parents_perc"]]]])
+  d <- cohort[rows, c(outcome, unname(area_cols), unname(inc_cols), keep), drop = FALSE]
   names(d)[match(area_cols, names(d))] <- names(area_cols)
+  names(d)[match(inc_cols, names(d))] <- names(inc_cols)
   d <- d[!is.na(d$org) & d$org %in% export_orgs, , drop = FALSE]
   d$org <- as.character(d$org)
   d$pc3 <- as.character(d$pc3)

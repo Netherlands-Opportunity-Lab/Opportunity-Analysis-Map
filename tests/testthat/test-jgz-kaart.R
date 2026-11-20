@@ -43,6 +43,30 @@ test_that("kaart_outcome_data uses that age's areas, only export orgs and only c
   expect_error(kaart_outcome_data(co[, setdiff(names(co), "pc3_m45")], "y_m45_visus", 7), "pc3_m45")
 })
 
+test_that("kaart_outcome_data takes the parental income of the outcome's age", {
+  co <- toy_cohort()
+  # cohort file with income per age: m24 and m45 get different percentiles
+  co$income_parents_perc_m24 <- co$income_parents_perc
+  co$income_group_m24 <- co$income_group
+  co$income_group_tails_m24 <- co$income_group_tails
+  co$income_parents_perc_m45 <- 1 - co$income_parents_perc
+  co$income_parents_perc_m45[1:10] <- NA
+  co$income_group_m45 <- factor(ifelse(co$income_parents_perc_m45 <= .35 & co$income_parents_perc_m45 >= .15, "Low", NA),
+                                levels = c("Low", "Mid", "High"))
+  co$income_group_tails_m45 <- NA
+  co$income_parents_perc <- NULL; co$income_group <- NULL; co$income_group_tails <- NULL
+  d45 <- kaart_outcome_data(co, "y_m45_visus", export_orgs = c(7, 10))
+  ok <- !is.na(co$y_m45_visus) & co$org_m45 == 7 & !is.na(co$income_parents_perc_m45)
+  expect_equal(nrow(d45), sum(ok))                        # no income at m45 -> left out
+  expect_equal(d45$income_parents_perc, co$income_parents_perc_m45[ok])
+  expect_false(any(grepl("_m45$|_m24$", setdiff(names(d45), c("y_m45_visus")))))
+  d24 <- kaart_outcome_data(co, "y_m24_bmi", export_orgs = c(7, 10))
+  expect_equal(d24$income_parents_perc, co$income_parents_perc_m24[co$org_m24 %in% c(7, 10)])
+  # an age without an income column in a per-age file is an error
+  co2 <- co; co2$income_parents_perc_m45 <- NULL
+  expect_error(kaart_outcome_data(co2, "y_m45_visus", 7), "not for m45")
+})
+
 test_that("estimates: mean for 'all', regression prediction for income groups, exact n", {
   co <- toy_cohort()
   d <- kaart_outcome_data(co, "y_m24_bmi", export_orgs = c(7, 10))
