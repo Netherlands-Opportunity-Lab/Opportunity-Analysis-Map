@@ -137,9 +137,12 @@ kaart_run <- function(cohort, outcomes, orgs, region_types, groups, conf_level =
     oc <- outcomes[k]
     t0 <- Sys.time()
     d <- kaart_outcome_data(cohort, oc, orgs)
-    estimates[[k]] <- kaart_estimate_outcome(d, oc, region_types, groups, conf_level = conf_level)
+    est_k <- kaart_estimate_outcome(d, oc, region_types, groups, conf_level = conf_level)
+    # `estimates[[k]] <- NULL` would delete element k and shorten the list
+    # (subscript out of bounds later on); empty outcomes stay NULL instead.
+    if (!is.null(est_k)) estimates[[k]] <- est_k
     message(sprintf("  [%d/%d] %s: %d children, %d estimates, %.1f s", k, length(outcomes), oc, nrow(d),
-                    if (is.null(estimates[[k]])) 0L else nrow(estimates[[k]]),
+                    if (is.null(est_k)) 0L else nrow(est_k),
                     as.numeric(difftime(Sys.time(), t0, units = "secs"))))
   }
   do.call(rbind, estimates)

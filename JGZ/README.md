@@ -9,7 +9,7 @@ root:
 
 ```r
 setwd("H:/Opportunity-Analysis-Map")
-source("JGZ/Scripts/map/jgz_map_tables.R")
+source("JGZ/Scripts/kaart/jgz_kaart.R")
 ```
 
 They are written for the CBS RA versions (R 3.6.2, dplyr 1.0.2).
