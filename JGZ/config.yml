@@ -24,10 +24,9 @@ default:
     # Organisations whose results are exported in this run (6 LimburgNoord,
     # 7 ZONL, 10 Verian, 12 org12). Permission to publish per organisation:
     # 6, 7 and 10 yes (meetings 21-09 and 20-10-2026); 12 no, never include it.
-    # [7, 10] is a selection, not the permission list: it comes from the 2026
-    # export script, which only took 7 and 10 (Limburg-Noord was in the
-    # 27-03-2025 export). Add 6 when Limburg-Noord should be in the export.
-    export_orgs: [7, 10]
+    # A selection within permitted_orgs. The 2026 export script only took 7 and
+    # 10 (Limburg-Noord was in the 27-03-2025 export); 6 added 25-11-2026.
+    export_orgs: [6, 7, 10]
     # The organisations that gave permission to publish per organisation. Every
     # run checks that export_orgs is a subset (jgz_check_orgs()).
     permitted_orgs: [6, 7, 10]
