@@ -18,95 +18,29 @@ expectation_grid <- read_rds(file.path(output_dir, "expectation_grid.rds"))
 
 
 
-#### CREATE NEW CATEGORICAL OUTCOME FOR NAs ####
+#### CBS OUTPUT RULES ####
+# The rules and reason codes are in the shared file src/lib/suppression_functions.R
+# (the same in Opportunity-Analysis-Gap and -Intragenerational). reason_of_na
+# holds ALL the reasons of a cell, separated by "; " (27-11-2026; before, only
+# the first rule that applied). A cell with one reason has the same text as before.
+#   0. no estimate (the regression gave none)
+#   1. fewer than 11 obs (every education group is a mean)
+#   2. est*n < 10 and 3. (1-est)*n < 10 (binary outcomes)
+#   4. est == 0 (continuous outcomes, not the _class_ and _neighborhood_ ones)
+#   5. n of school < 3 (_class_ outcomes in the PC4 areas below)
+# Suppressed cells: est, lwr, upr and n NA. n is rounded to tens.
+source(file.path("src", "lib", "suppression_functions.R"))
 
-expectation_grid <- 
-  expectation_grid %>% 
-  mutate(reason_of_na = NA)
-
-
-# step 1: regressions with fewer than 11 observations (degree of freedom = coefficients - 1)
-
-# for averages, degrees of freedom - 1, so n < 11
-
-
-expectation_grid <-
-  expectation_grid %>%
-  mutate(
-    not_disclose = ifelse((n < 11 & is.na(reason_of_na)), TRUE, FALSE),
-    reason_of_na = ifelse(not_disclose, '1. fewer than 11 obs', reason_of_na), 
-    est = ifelse(not_disclose, NA, est),
-    lwr = ifelse(not_disclose, NA, lwr),
-    upr = ifelse(not_disclose, NA, upr),
-    n = ifelse(not_disclose, NA, n)
-  ) %>% select(-not_disclose)
-
-
-# step 2: regressions with est*n < 10 
-expectation_grid <-
-  expectation_grid %>%
-  mutate(
-    not_disclose = ifelse((binary == "TRUE" & est*n < 10 & is.na(reason_of_na)), TRUE, FALSE),
-    reason_of_na = ifelse(not_disclose, '2. est*n < 10', reason_of_na),
-    est = ifelse(not_disclose, NA, est),
-    lwr = ifelse(not_disclose, NA, lwr),
-    upr = ifelse(not_disclose, NA, upr),
-    n = ifelse(not_disclose, NA, n)
-  ) %>% select(-not_disclose)
-
-
-# step 3: regressions with (1-est)*n < 10
-expectation_grid <-
-  expectation_grid %>%
-  mutate(
-    not_disclose = ifelse((binary == "TRUE" & (1-est)*n < 10 & is.na(reason_of_na)), TRUE, FALSE),
-    reason_of_na = ifelse(not_disclose, '3. (1-est)*n < 10', reason_of_na),
-    est = ifelse(not_disclose, NA, est),
-    lwr = ifelse(not_disclose, NA, lwr),
-    upr = ifelse(not_disclose, NA, upr),
-    n = ifelse(not_disclose, NA, n)
-  ) %>% select(-not_disclose)
-
-
-# step 4: regressions with est == 0 
-expectation_grid <-
-  expectation_grid %>%
-  mutate(
-    reason_of_na = ifelse((
-      !str_detect(outcome, '_class_') & !str_detect(outcome, '_neighborhood_') &
-        est == as.integer(0) & binary == FALSE &  !is.na(est) & is.na(reason_of_na)), 
-      '4. est == 0', reason_of_na),
-    est = ifelse(est == 0, NA, est),
-    lwr = ifelse(est == 0, NA, lwr),
-    upr = ifelse(est == 0, NA, upr),
-    n = ifelse(est == 0, NA, n)
-  )
-
-
-# step 5: remove estimates with the mentioned postcodes
+# PC4 areas with fewer than 3 schools
 postcodes <- c("9021", "8843", "4529", "9163")
 
-expectation_grid <-
-  expectation_grid %>%
-  mutate(
-    not_disclose = ifelse((
-      str_detect(outcome, '_class_') &  region_type == 'postcode4' & 
-        region_id %in% postcodes), 
-      TRUE, FALSE),
-    reason_of_na = ifelse(not_disclose, '5. n of school < 3', reason_of_na),
-    est = ifelse(not_disclose, NA, est),
-    lwr = ifelse(not_disclose, NA, lwr),
-    upr = ifelse(not_disclose, NA, upr),
-    n = ifelse(not_disclose, NA, n)
-  ) %>% select(-not_disclose)
+expectation_grid <- kaart_suppress(expectation_grid,
+                                   regression = FALSE,
+                                   min_n_mean = 11, min_n_regression = 12, min_count = 10,
+                                   school_postcodes = postcodes, round_n = 10)
 
-table(expectation_grid$reason_of_na)
+print(table(expectation_grid$reason_of_na, useNA = "ifany"))
 
-
-# rounding number of observations to the nearest ten numbers
-expectation_grid <-
-  expectation_grid %>%
-  mutate(n = round(n, -1))
 
 
 # Separate (outcome files per region) ----

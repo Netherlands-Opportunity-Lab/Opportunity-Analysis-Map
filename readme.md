@@ -41,10 +41,32 @@ of them. Differences to resolve first:
   age35, and income and wealth select different columns from the COROP and
   PC6-gwb tables.
 - `03_array_job`: income and education use 64 cores per node, wealth 96.
-- `05_post_process`: the disclosure rules differ between income and wealth
-  (e.g. `not_disclose` vs `reason_of_na` in the same rule).
+- Fixed on 27-11-2026: the disclosure rules of `05_post_process` differed
+  between the three (in education and wealth, rule 4 also suppressed
+  `_class_` / `_neighborhood_` outcomes with an estimate of 0, without a
+  reason). All three now call `kaart_suppress()` from the shared
+  `src/lib/suppression_functions.R` (see below).
 - Fixed on 30-10-2026: the wealth grid referred to the data source
   `age35_cohxort` (typo) for `c35_individual_income`, so those models could not run.
+
+## Suppression (CBS output rules)
+
+Since 27-11-2026 every results table has the column `reason_of_na`: **all** the reasons why a cell is not published, ordered by code and separated by `; ` (e.g. `1. fewer than 50 obs; 2. est*n < 10`), or empty when the cell is published. Suppressed cells keep their row with the statistics set to `NA`, also in the export, so every missing number can be traced to its reason. The rules and codes are in `src/lib/suppression_functions.R`, a shared file that is the same in Opportunity-Analysis-Gap, -Intragenerational and -Map (`tests/testthat/test-structure.R` checks this when the repositories are cloned next to each other); the thresholds are in the config.
+
+| Code | Reason |
+|---|---|
+| `0. no estimate` | the model gave no estimate (Map) |
+| `0. not computed: fewer than 50 obs in the subgroup` | the subgroup is too small for a mean (Gap, Intragenerational) |
+| `1. fewer than k obs` | N below the minimum per cell (50 in Gap and Intragenerational; 11 for a mean and 12 for a regression in Map) |
+| `2. est*n < 10` | binary outcome: too few cases |
+| `3. (1-est)*n < 10` | binary outcome: too few non-cases |
+| `4. est == 0` | continuous estimate of exactly 0 (Map) |
+| `5. n of school < 3` | PC4 area with fewer than 3 schools (Map, `_class_` outcomes) |
+| `6. sd == 0` | no variation in the outcome (Intragenerational) |
+| `7. fewer than 3 non-zero x values` | (Intragenerational) |
+| `8. other cell of the gradient or group suppressed` | complementary suppression: a gradient (all bins) or group (all categories) is published whole or not at all |
+
+In Map the rules are applied in `05_post_process` (national kaart) and in `JGZ/Scripts/kaart/jgz_kaart_functions.R` (`kaart_disclosure()`, JGZ kaart, including the bereik outcomes), both with `kaart_suppress()`. A cell with one reason has the same text as before 27-11-2026; before, only the first rule that applied was recorded, rule 5 overwrote an earlier reason, and a cell without an estimate kept its `n` without a reason (now `0. no estimate`, `n` NA). Suppressed cells have `est`, `lwr`, `upr` and `n` NA; `n` is rounded to tens.
 
 ## License
 

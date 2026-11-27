@@ -1,6 +1,7 @@
 # JGZ kaart (JGZ/Scripts/kaart/jgz_kaart_functions.R). Toy cohort, no CBS data.
 root <- file.path("..", "..")
 suppressPackageStartupMessages(library(dplyr))
+source(file.path(root, "src", "lib", "suppression_functions.R"))
 source(file.path(root, "JGZ", "Scripts", "kaart", "jgz_kaart_functions.R"))
 source_expectation_function(file.path(root, "src", "income_parents"))
 
@@ -94,20 +95,35 @@ test_that("estimates: mean for 'all', regression prediction for income groups, e
   expect_equal(nrow(res), (2 + 3) * nrow(groups))         # 2 orgs + 3 PC4s
 })
 
-test_that("kaart_disclosure applies the national CBS rules in order", {
+test_that("kaart_disclosure applies the national CBS rules and keeps every reason", {
   res <- data.frame(outcome = "y", binary = c(TRUE, TRUE, TRUE, FALSE, FALSE, TRUE),
                     income_group = c("all", "Low", "all", "all", "all", "all"),
                     n = c(10L, 11L, 100L, 50L, 50L, 100L), est = c(.5, .5, .05, 0, 16, .5),
                     lwr = 0, upr = 1, stringsAsFactors = FALSE)
   out <- kaart_disclosure(res)
-  expect_equal(out$reason_of_na, c("1. fewer than 11 obs", "1. fewer than 12 obs", "2. est*n < 10",
-                                   "4. est == 0", NA, NA))
+  expect_equal(out$reason_of_na, c("1. fewer than 11 obs; 2. est*n < 10; 3. (1-est)*n < 10",
+                                   "1. fewer than 12 obs; 2. est*n < 10; 3. (1-est)*n < 10",
+                                   "2. est*n < 10", "4. est == 0", NA, NA))
   expect_true(all(is.na(out$est[1:4])) && all(is.na(out$n[1:4])))
   expect_equal(out$n[5:6], c(50L, 100L))
   expect_equal(kaart_disclosure(data.frame(binary = TRUE, income_group = "all", n = 100L, est = .95,
                                            lwr = 0, upr = 1))$reason_of_na, "3. (1-est)*n < 10")
   expect_equal(kaart_disclosure(data.frame(binary = FALSE, income_group = "all", n = 47L, est = 3,
                                            lwr = 0, upr = 1))$n, 50L)
+  # a regression without an estimate (e.g. no variation in income)
+  expect_equal(kaart_disclosure(data.frame(outcome = "y", binary = FALSE, income_group = "Low", n = 5L,
+                                           est = NA_real_, lwr = NA, upr = NA))$reason_of_na,
+               "0. no estimate; 1. fewer than 12 obs")
+})
+
+test_that("national rules: est == 0 not for _class_/_neighborhood_ outcomes, rule 5 only for _class_ in PC4", {
+  g <- data.frame(outcome = c("c11_class_x", "c11_neighborhood_x", "c11_y", "c11_class_x", "c11_class_x"),
+                  binary = FALSE, income_group = "all", n = 100L, est = c(0, 0, 0, 2, 2), lwr = 0, upr = 1,
+                  region_type = c("postcode4", "postcode4", "postcode4", "postcode4", "postcode3"),
+                  region_id = c("1234", "1234", "1234", "9021", "902"), stringsAsFactors = FALSE)
+  out <- kaart_suppress(g, regression = FALSE, school_postcodes = c("9021", "8843"))
+  expect_equal(out$reason_of_na, c(NA, NA, "4. est == 0", "5. n of school < 3", NA))
+  expect_equal(out$est, c(0, 0, NA, NA, 2))
 })
 
 test_that("JGZ/config.yml has the kaart settings and paths", {

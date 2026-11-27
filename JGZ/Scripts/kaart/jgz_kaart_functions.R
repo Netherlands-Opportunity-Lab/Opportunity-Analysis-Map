@@ -196,28 +196,14 @@ kaart_run_cohorts <- function(cohorts, outcomes_by_cohort, orgs, region_types, g
 }
 
 # CBS output rules of the national kaart post-processing
-# (src/income_parents/*_05_post_process_income.R, rules 1-4), applied in the
-# same order; the first rule that applies is kept in reason_of_na. Rule 5 there
-# (fewer than 3 schools) has no JGZ equivalent. Suppressed cells get est, lwr,
-# upr and n = NA; n is rounded to tens.
+# (src/<ses>_parents/*_05_post_process_<ses>.R): the same function,
+# kaart_suppress() in the shared file src/lib/suppression_functions.R (source it
+# first). reason_of_na holds ALL the reasons of a cell, ordered by code
+# ("0. no estimate", "1. fewer than 11 obs", "2. est*n < 10", "3. (1-est)*n < 10",
+# "4. est == 0"), separated by "; " (27-11-2026; before, only the first rule
+# that applied). Rule 5 there (fewer than 3 schools) has no JGZ equivalent.
+# Suppressed cells get est, lwr, upr and n = NA; n is rounded to tens.
 kaart_disclosure <- function(res, min_n_mean = 11, min_n_regression = 12, min_count = 10, round_n = 10) {
-  res$reason_of_na <- NA_character_
-  hide <- function(res, rule, reason) {
-    rule <- rule & is.na(res$reason_of_na)
-    rule[is.na(rule)] <- FALSE
-    res$reason_of_na[rule] <- reason
-    res[rule, c("est", "lwr", "upr")] <- NA
-    res$n[rule] <- NA
-    res
-  }
-  is_all <- res$income_group == "all"
-  res <- hide(res, is_all & res$n < min_n_mean, paste0("1. fewer than ", min_n_mean, " obs"))
-  res <- hide(res, !is_all & res$n < min_n_regression, paste0("1. fewer than ", min_n_regression, " obs"))
-  # a regression that could not be estimated (e.g. no variation in income)
-  res <- hide(res, is.na(res$est), "0. no estimate")
-  res <- hide(res, res$binary & res$est * res$n < min_count, paste0("2. est*n < ", min_count))
-  res <- hide(res, res$binary & (1 - res$est) * res$n < min_count, paste0("3. (1-est)*n < ", min_count))
-  res <- hide(res, !res$binary & res$est == 0, "4. est == 0")
-  res$n <- as.integer(round(res$n / round_n) * round_n)
-  res
+  kaart_suppress(res, regression = res$income_group != "all", min_n_mean = min_n_mean,
+                 min_n_regression = min_n_regression, min_count = min_count, round_n = round_n)
 }
