@@ -18,9 +18,9 @@ They are written for the CBS RA versions (R 3.6.2, dplyr 1.0.2).
 
 | Script | Input | Output | What it does |
 |---|---|---|---|
-| `kaart/jgz_kaart.R` | `output/jgz_cohort.rds` (preprocessing, cohort `jgz`) | `jgz_kaart_estimates.rds` (internal), `jgz_kaart_results.rds/.csv` | **Kaart with the kansenkaart method** (16-11-2026): per outcome, area (organisation, PC3, PC4 at the contact used for that age) and group, `kansenkaart_expect()` of the national kaart (`src/income_parents/*_01_expectation_function_income.R`): the mean for income "all", `lm(outcome ~ income_parents_perc)` predicted at 25/50/75 for Low/Mid/High, with the parental income of the outcome's age (`income_parents_perc_<age>`, since 20-11-2026). Only children seen by an organisation in `export_orgs`. CBS rules as the national post-processing (rules 1-4, `n` rounded to tens). Groups and rules in `config.yml` (`kaart_*`). Functions in `kaart/jgz_kaart_functions.R`, tests in `tests/testthat/test-jgz-kaart.R` |
+| `kaart/jgz_kaart.R` | `output/jgz_cohort.rds` and `output/jgz_catchment_cohort.rds` (preprocessing, cohorts `jgz` and `jgz_catchment`) | `jgz_kaart_estimates.rds` (internal), `jgz_kaart_results.rds/.csv` (column `sample`: `jgz` or `jgz_catchment`) | **Kaart with the kansenkaart method** (16-11-2026): per outcome, area (organisation, PC3, PC4 at the contact used for that age) and group, `kansenkaart_expect()` of the national kaart (`src/income_parents/*_01_expectation_function_income.R`): the mean for income "all", `lm(outcome ~ income_parents_perc)` predicted at 25/50/75 for Low/Mid/High, with the parental income of the outcome's age (`income_parents_perc_<age>`, since 20-11-2026). Only children seen by an organisation in `export_orgs`. CBS rules as the national post-processing (rules 1-4, `n` rounded to tens). Groups and rules in `config.yml` (`kaart_*`). **Bereik** (27-11-2026; Bastian, 20-11-2026): the take-up outcomes of the catchment cohort (`m024/m036/m045_takeup`, `m045_takeup_always`, `m045_takeup_any`: seen at 2y / 3y / 3y9m, always, at least once) are outcomes like the others, per area (catchment area, PC3/PC4 of the child's address) and income group; their denominator is every child living in the area with a parental income at that age. Functions in `kaart/jgz_kaart_functions.R`, tests in `tests/testthat/test-jgz-kaart.R` |
 | *(kloof)* | | | **Moved to Opportunity-Analysis-Gap** (`JGZ/jgz_kloof.R`, 17-11-2026), so it uses Gap's own functions and thresholds. `export_orgs` / `export_pooled` must be the same in both repos; the Gap script stops when they differ |
-| `bereik/jgz_bereik.R` | `output/jgz_catchment_cohort.rds` (preprocessing, cohort `jgz_catchment`) | `jgz_bereik_estimates.rds` (internal), `jgz_bereik_results.rds/.csv` | **Bereik per catchment area, PC3 and PC4** (16-11-2026): share of the children living in the area who were seen at 2y / 3y / 3y9m, always and at least once (same denominator). Same estimate and CBS rules as the kaart; only catchment areas of `export_orgs` (`org_catchment_codes` maps 1-4 to 6/7/10/12) |
+| *(bereik)* | | | **Part of the kaart and the kloof since 27-11-2026.** The separate `bereik/jgz_bereik.R` (take-up per area, income group "all" only) was removed; its results (`H:/JGZ-Pilot-Data/bereik`) are superseded by the `jgz_catchment` rows of the kaart results. In the RA, delete `JGZ/Scripts/bereik/` |
 | `map/jgz_map_tables.R` | `cm_<visit>.rds` (preprocessing 02) | `jgz_maps_{bmi,wiechen,sdq}.xlsx` | BMI / Wiechen / SDQ per PC3 and PC4, one measurement per child per visit (the one closest to the nominal age, `target_age`), small-cell suppression |
 | `gradients/jgz_tidy_gradients.R` | gradient Excel files | `*_tidy.xlsx` | Reshapes gradient output (20 income bins) from wide to long |
 | `gradients/jgz_check_gradients.R` | `*_tidy.xlsx` | `*_tidy_export.xlsx` | Combines speech/language files and runs the disclosure checks in `gradients/check_function.R` |
@@ -43,12 +43,12 @@ Not in this repository: the script that produces the gradient output that
 
 - **Pooling.** Only the organisations that gave permission are pooled.
   `permitted_orgs` (6, 7, 10) is the permission list; `export_orgs` must be
-  within it, and every run stops otherwise (`jgz_check_orgs()`). In the kaart,
-  bereik and kloof "pooled" = the children of `export_orgs` only, so never
+  within it, and every run stops otherwise (`jgz_check_orgs()`). In the kaart
+  (incl. bereik) and kloof "pooled" = the children of `export_orgs` only, so never
   org 12: a total with org 12 next to per-organisation results lets org 12 be
   backed out. The old export bundle refuses `export_pooled` (its pooled map
   tables cover all four organisations) and `export_excl`.
-- **Internal run for org 12.** `internal_orgs: [12]`: the kaart and bereik are
+- **Internal run for org 12.** `internal_orgs: [12]`: the kaart (incl. bereik) is
   also run for org 12 and written to `<results folder>/internal/INTERNAL_*`.
   Internal use only, never exported; `internal_orgs` may not overlap with
   `export_orgs`. The Gap kloof does the same (`settings$jgz$internal_orgs`).

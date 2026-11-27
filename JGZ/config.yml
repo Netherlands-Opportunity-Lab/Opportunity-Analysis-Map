@@ -33,7 +33,7 @@ default:
     # Pooled results (Bastian, 20-11-2026): only over the permitted
     # organisations. A total that includes org 12 next to per-organisation
     # results lets org 12 be backed out, and if its name leaked so would the
-    # results of all its children. So in the kaart, bereik and kloof "pooled" =
+    # results of all its children. So in the kaart (incl. bereik) and kloof "pooled" =
     # the children of export_orgs only (never 12). The old export bundle's
     # pooled files (map tables) cover all four organisations: with
     # export_pooled TRUE it stops.
@@ -42,7 +42,7 @@ default:
     # still contains org 12, so together with the per-organisation results it
     # backs org 12 out. Not allowed (20-11-2026): the export bundle stops when TRUE.
     export_excl: FALSE
-    # Internal run (Bastian, 20-11-2026): the kaart and bereik are also run for
+    # Internal run (Bastian, 20-11-2026): the kaart (incl. bereik) is also run for
     # these organisations, NOT for export, written to <results folder>/internal
     # (file names with "INTERNAL"). Never in export_orgs. [] = no internal run.
     internal_orgs: [12]
@@ -57,7 +57,13 @@ default:
     # export_pooled is TRUE.
     # export_orgs / export_pooled are also in the Gap repo's config (settings$jgz,
     # JGZ kloof); its JGZ/jgz_kloof.R stops when the two differ.
-    # Outcomes: "all" = every m<age>_* column of the cohort file, or a list.
+    # Bereik (27-11-2026; Bastian, 20-11-2026): the take-up outcomes of the
+    # catchment cohort (catchment_cohort_file: m024/m036/m045_takeup,
+    # m045_takeup_always, m045_takeup_any) are kaart outcomes like the others,
+    # with the same groups, areas and CBS rules (org = catchment area, pc3/pc4 =
+    # the child's address); results have sample = "jgz_catchment". This replaces
+    # the separate bereik script (JGZ/Scripts/bereik, removed).
+    # Outcomes: "all" = every m<age>_* column of both cohort files, or a list.
     kaart_outcomes: "all"
     # Areas: "org" (organisation of the contact), "pc3", "pc4" (GBA address at
     # the contact used for that age: pc3_m<age>, pc4_m<age>)
@@ -80,19 +86,6 @@ default:
     kaart_min_count: 10
     kaart_round_n: 10
 
-    # --- bereik (bereik/jgz_bereik.R) ----------------------------------------------
-    # Take-up from the catchment sample (jgz_catchment_cohort.rds): share of the
-    # children living in the area who were seen by the JGZ, per organisation
-    # (catchment area), PC3 and PC4 of the child's address. Same estimate and
-    # CBS rules as the kaart (income group "all" only: the catchment sample has
-    # no parental income percentile).
-    bereik_region_types: ["org", "pc3", "pc4"]
-    bereik_gender_groups: ["all"]
-    # org_catchment area number (1-4, Coen's Stata file) -> org code (6, 7, 10,
-    # 12), so export_orgs applies. The R rebuild (jgz_catchment_cohort.rds)
-    # already stores the org codes; bereik_data() then uses them as they are.
-    org_catchment_codes: {"1": 6, "2": 7, "3": 10, "4": 12}
-
   file_locations:
     # Cohort file of the preprocessing (Opportunity-Preprocessing, cohort jgz):
     # one row per child, outcomes m<age>_*, pc3/pc4/org per age. Input of the kaart.
@@ -100,10 +93,10 @@ default:
     # Kaart results (kaart/jgz_kaart.R): estimates before and after the CBS rules
     kaart_folder: "H:/JGZ-Pilot-Data/kaart"
     # Catchment cohort of the preprocessing (cohort jgz_catchment): one row per
-    # child living in a catchment area, y_m*_takeup*, org_catchment, postcode_4
+    # child living in a catchment area, seen or not; m<age>_takeup*, the same
+    # area (org_/pc3_/pc4_<age>) and income columns as cohort_file (since
+    # 27-11-2026). Second input of the kaart (bereik outcomes).
     catchment_cohort_file: "H:/Opportunity-Preprocessing/output/jgz_catchment_cohort.rds"
-    # Bereik results (bereik/jgz_bereik.R)
-    bereik_results_folder: "H:/JGZ-Pilot-Data/bereik"
 
     # Input from the preprocessing: one .rds per contact moment
     # (Opportunity-Preprocessing config/jgz.yml: contact_moment_folder)
@@ -119,6 +112,7 @@ default:
 
     # Other results bundled for export
     proportions_folder:  "H:/Archive/Sonya/JGZ pilot data/Proportions Results"
+    # (Coen's bereik regressions, not the kaart)
     bereik_folder:       "H:/Archive/Sonya/JGZ pilot data/Bereik Regression Results"
     export_descriptives_folder: "H:/Archive/Sonya/JGZ pilot data/Descriptives Results"
     export_folder:       "H:/Archive/Sonya/Export JGZ"

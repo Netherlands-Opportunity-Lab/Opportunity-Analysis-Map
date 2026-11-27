@@ -9,7 +9,14 @@
 #     the GBA address and organisation at the contact used for that age);
 #   - only children seen by an organisation in export_orgs are used;
 #   - only children with a value for the outcome are passed, because
-#     kansenkaart_expect() reports n = nrow(data), not the number used by lm().
+#     kansenkaart_expect() reports n = nrow(data), not the number used by lm();
+#   - two cohort files (27-11-2026): the JGZ cohort (children seen by the JGZ,
+#     the measured outcomes) and the catchment cohort (children living in a
+#     catchment area, seen or not: the bereik / take-up outcomes m<age>_takeup*).
+#     Bastian (20-11-2026): bereik is a dummy outcome like the others, so it is
+#     estimated per area and income group with the same function and rules.
+#     Both files have the same area, income and group columns; each outcome is
+#     estimated on the file it is in (kaart_run_cohorts()).
 
 
 # Load kansenkaart_expect() from the national kaart scripts. The version
@@ -76,7 +83,8 @@ kaart_outcome_data <- function(cohort, outcome, export_orgs) {
   age <- outcome_age(outcome)
   area_cols <- c(org = paste0("org_", age), pc3 = paste0("pc3_", age), pc4 = paste0("pc4_", age))
   missing <- setdiff(area_cols, names(cohort))
-  if (length(missing) > 0) stop(outcome, ": area columns missing in the cohort file: ", paste(missing, collapse = ", "))
+  if (length(missing) > 0) stop(outcome, ": area columns missing in the cohort file: ", paste(missing, collapse = ", "),
+                                " (a catchment cohort file from before 27-11-2026? Rerun jgz_catchment 02-04 in Opportunity-Preprocessing)")
   inc_cols <- income_columns(cohort, age)
   if (!"income_parents_perc" %in% names(inc_cols)) stop(outcome, ": no parental income column in the cohort file.")
   keep <- setdiff(intersect(GROUP_COLUMNS, names(cohort)), c(names(inc_cols), unname(inc_cols)))
@@ -146,6 +154,45 @@ kaart_run <- function(cohort, outcomes, orgs, region_types, groups, conf_level =
                     as.numeric(difftime(Sys.time(), t0, units = "secs"))))
   }
   do.call(rbind, estimates)
+}
+
+# The cohort files of the kaart (27-11-2026), as a named vector sample -> path:
+# jgz = the JGZ cohort (measured outcomes), jgz_catchment = the catchment cohort
+# (bereik / take-up outcomes). Both are outputs of Opportunity-Preprocessing.
+kaart_cohort_files <- function(loc) {
+  files <- c(jgz = loc$cohort_file, jgz_catchment = loc$catchment_cohort_file)
+  if (length(files) != 2) stop("Set both cohort_file and catchment_cohort_file in JGZ/config.yml (file_locations).")
+  files
+}
+
+# Outcomes per cohort: a named list sample -> outcomes. "all" = every m<age>_*
+# column of each file; a list = those outcomes, each taken from the file it is
+# in. An outcome name may occur in one file only (otherwise it would be unclear
+# which denominator its results have).
+kaart_outcomes_by_cohort <- function(cohorts, setting = "all") {
+  per <- lapply(cohorts, kaart_outcome_list, setting = "all")
+  all_y <- unlist(per, use.names = FALSE)
+  dup <- unique(all_y[duplicated(all_y)])
+  if (length(dup) > 0) stop("Outcome(s) in more than one cohort file: ", paste(dup, collapse = ", "))
+  if (identical(setting, "all")) return(per)
+  wanted <- unlist(setting)
+  missing <- setdiff(wanted, all_y)
+  if (length(missing) > 0) stop("kaart_outcomes not in the cohort files: ", paste(missing, collapse = ", "))
+  lapply(per, function(y) intersect(wanted, y))
+}
+
+# kaart_run() for every cohort (names(cohorts) = the samples), one table with a
+# first column `sample` (jgz / jgz_catchment): the take-up outcomes are shares
+# of all children living in the area, the other outcomes of the children seen.
+kaart_run_cohorts <- function(cohorts, outcomes_by_cohort, orgs, region_types, groups, conf_level = 0.95) {
+  out <- lapply(names(cohorts), function(s) {
+    oc <- outcomes_by_cohort[[s]]
+    if (length(oc) == 0) return(NULL)
+    est <- kaart_run(cohorts[[s]], oc, orgs, region_types, groups, conf_level = conf_level)
+    if (is.null(est) || nrow(est) == 0) return(NULL)
+    cbind(sample = s, est, stringsAsFactors = FALSE)
+  })
+  do.call(rbind, out)
 }
 
 # CBS output rules of the national kaart post-processing
